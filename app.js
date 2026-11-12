@@ -1,7 +1,7 @@
-/* ── CONFIG ── */
+/* ── CONFIG ──
+   Valores públicos por natureza: a segurança é garantida no backend
+   (Apps Script), que verifica login Google + permissão de cada pessoa. */
 const CONFIG = {
-  SHEET_ID:        "1hxcjBX7q41HRK3-SqdXT7-nS6r5kWVuK3vi3jcF88Ao",
-  SHEET_TAB:       "webinventario",
   // URL da implantação do Apps Script (termina em /exec)
   APPS_SCRIPT_URL: "COLE_AQUI_A_URL_DA_IMPLANTACAO/exec",
   // OAuth Client ID (mesmo valor de CLIENT_ID no Code.gs)

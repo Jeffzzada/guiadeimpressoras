@@ -17,16 +17,27 @@
    (a autenticação é feita pelo ID token verificado abaixo)
    ═══════════════════════════════════════════════════════════════ */
 
-const SHEET_ID    = "1hxcjBX7q41HRK3-SqdXT7-nS6r5kWVuK3vi3jcF88Ao";
-const ABA_ESTOQUE = "webinventario";
-const ABA_LOG     = "Movimentações";
-const ABA_USUARIOS = "Usuarios";
+/* Configuração fica nas Propriedades do script (fora do repositório público):
+   Apps Script → Configurações do projeto → Propriedades do script
+     SHEET_ID         ID da planilha
+     CLIENT_ID        OAuth Client ID (o mesmo do app.js)
+     ADMINS_INICIAIS  e-mails separados por vírgula (só usados ao criar a aba Usuarios) */
+const PROPS = PropertiesService.getScriptProperties();
+const prop = nome => (PROPS.getProperty(nome) || "").trim();
+function checarConfig() {
+  ["SHEET_ID", "CLIENT_ID"].forEach(n => {
+    if (!prop(n)) throw new Error("configuração ausente no Apps Script: " + n);
+  });
+}
+const SHEET_ID        = prop("SHEET_ID");
+const CLIENT_ID       = prop("CLIENT_ID");
+const ADMINS_INICIAIS = (PROPS.getProperty("ADMINS_INICIAIS") || "")
+  .split(",").map(s => s.trim()).filter(Boolean);
 
-// OAuth Client ID (Google Cloud Console → Credenciais). Igual ao do app.js.
-const CLIENT_ID      = "COLE_AQUI_SEU_CLIENT_ID.apps.googleusercontent.com";
-const DOMINIO        = "shopee.com";
-// Admins iniciais: gravados como admin aprovado quando a aba Usuarios é criada
-const ADMINS_INICIAIS = [];
+const ABA_ESTOQUE  = "webinventario";
+const ABA_LOG      = "Movimentações";
+const ABA_USUARIOS = "Usuarios";
+const DOMINIO      = "shopee.com";
 
 const LOG_HEADER = ["ID", "Data", "Modelo", "Tipo", "Qtd", "Turno", "Responsavel",
                     "Email", "Observacao", "Status", "Revisor", "RevisadoEm"];
@@ -35,6 +46,7 @@ const TIPOS = ["entrada_cheio", "saida_cheio", "entrada_vazio", "saida_vazio"];
 /* ── Roteamento ── */
 function doGet(e) {
   try {
+    checarConfig();
     const action = e.parameter.action;
     if (action === "getEstoque") return resposta(getEstoque());
     if (action === "getLog")     return resposta(getLog());
@@ -46,6 +58,7 @@ function doGet(e) {
 
 function doPost(e) {
   try {
+    checarConfig();
     const payload = JSON.parse(e.postData.contents);
     const user = autenticar(payload.token);          // camada 1: Google OAuth (lança erro se inválido)
     const a = payload.action;
