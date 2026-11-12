@@ -60,6 +60,9 @@
     font: inherit; font-size: 11.5px; font-weight: 600; padding: 4px 10px;
     border-radius: 6px; cursor: pointer; border: 1px solid transparent;
   }
+  .btn-ghost { background: transparent; color: var(--ink-mid); border-color: var(--border); }
+  .alert-err { background: #FDECEA; border: 1px solid #E8B4AE; color: #C0392B; }
+  #acesso-aviso[hidden] { display: none; }
   .btn-ok  { background: var(--success); color: #fff; }
   .btn-rev { background: transparent; color: #C0392B; border-color: #E8B4AE; }
 </style>
@@ -132,6 +135,12 @@
       <span class="tag tag-admin" id="auth-admin" hidden>Admin</span>
       <button class="btn-link" onclick="sair()">Sair</button>
     </div>
+  </div>
+
+  <!-- AVISO DE PERMISSÃO (2ª camada) -->
+  <div class="alert alert-warn" id="acesso-aviso" hidden>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+    <span></span>
   </div>
 
   <!-- TABELA DE ESTOQUE -->
@@ -229,14 +238,22 @@
     </div>
   </div>
 
-  <!-- ADMINS (admin) -->
-  <div class="section" id="sec-admins" hidden>
-    <div class="section-title">Administradores</div>
-    <div class="toner-panel" style="padding:16px;">
-      <div id="admin-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px;"></div>
-      <div style="display:flex;gap:8px;">
-        <input class="form-input" id="new-admin" type="email" placeholder="nome@shopee.com" style="flex:1">
-        <button class="btn-primary" onclick="adicionarAdmin()">Adicionar</button>
+  <!-- USUÁRIOS E PERMISSÕES (admin) -->
+  <div class="section" id="sec-usuarios" hidden>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border);">
+      <div class="section-title" style="margin-bottom:0;padding-bottom:0;border:none;">Usuários e permissões</div>
+      <span style="font-size:12px;color:var(--ink-soft)" id="usr-count">—</span>
+    </div>
+    <div class="toner-panel">
+      <table class="log-table">
+        <thead>
+          <tr><th>Pessoa</th><th>Papel</th><th>Acesso</th><th>Solicitado em</th><th></th></tr>
+        </thead>
+        <tbody id="usr-tbody"></tbody>
+      </table>
+      <div style="display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--border);">
+        <input class="form-input" id="new-user" type="email" placeholder="Pré-aprovar: nome@shopee.com" style="flex:1">
+        <button class="btn-primary" onclick="preAprovar()">Liberar acesso</button>
       </div>
     </div>
   </div>
@@ -407,14 +424,26 @@ function atualizarUIAuth() {
   document.getElementById("auth-admin").hidden = !(logado && usuario.isAdmin);
 
   const btn = document.getElementById("btn-abrir");
-  btn.disabled = !logado;
-  btn.title = logado ? "" : "Faça login para registrar";
+  const pode = logado && usuario.podeRegistrar;
+  btn.disabled = !pode;
+  btn.title = !logado ? "Faça login para registrar"
+            : !pode   ? "Seu acesso precisa ser aprovado por um admin" : "";
+
+  // aviso da 2ª camada (permissão individual)
+  const aviso = document.getElementById("acesso-aviso");
+  aviso.hidden = !logado || pode;
+  if (logado && !pode) {
+    aviso.className = usuario.status === "bloqueado" ? "alert alert-err" : "alert alert-warn";
+    aviso.querySelector("span").innerHTML = usuario.status === "bloqueado"
+      ? "<strong>Acesso bloqueado.</strong> Fale com a equipe de TI se achar que é um engano."
+      : "<strong>Solicitação de acesso enviada.</strong> Um admin precisa liberar sua conta antes que você possa registrar movimentações. Recarregue a página depois da aprovação.";
+  }
 
   const admin = logado && usuario.isAdmin;
   document.getElementById("sec-pendentes").hidden = !admin;
-  document.getElementById("sec-admins").hidden    = !admin;
+  document.getElementById("sec-usuarios").hidden  = !admin;
   document.querySelectorAll(".col-admin").forEach(el => el.hidden = !admin);
-  if (admin) carregarAdmins();
+  if (admin) carregarUsuarios();
 }
 
 /* ── ESTOQUE ── */
@@ -544,35 +573,62 @@ async function revisar(id, acao) {
   }
 }
 
-/* ── ADMINS ── */
-async function carregarAdmins() {
-  try {
-    const lista = await apiAuth({ action: "getAdmins" });
-    document.getElementById("admin-list").innerHTML = lista.map(e => `
-      <div style="display:flex;align-items:center;justify-content:space-between;font-size:13px;">
-        <span style="font-family:var(--mono)">${esc(e)}</span>
-        ${e === usuario.email ? '<span style="font-size:11px;color:var(--ink-soft)">você</span>'
-          : `<button class="btn-rev" onclick="removerAdmin('${esc(e)}')">Remover</button>`}
-      </div>`).join("");
-  } catch { /* silencioso */ }
+/* ── USUÁRIOS / PERMISSÕES (admin) ── */
+const USR_STATUS = {
+  pendente:  '<span class="tag tag-pend">Aguardando</span>',
+  aprovado:  '<span class="tag tag-in">Aprovado</span>',
+  bloqueado: '<span class="tag tag-rev">Bloqueado</span>'
+};
+
+function botoesUsuario(u) {
+  if (u.email === usuario.email) return '<span style="font-size:11px;color:var(--ink-soft)">você</span>';
+  const e = esc(u.email), b = [];
+  if (u.status !== "aprovado")  b.push(`<button class="btn-ok"  onclick="setUsuario('${e}',{status:'aprovado'})">Aprovar</button>`);
+  if (u.status !== "bloqueado") b.push(`<button class="btn-rev" onclick="setUsuario('${e}',{status:'bloqueado'})">${u.status === "pendente" ? "Recusar" : "Bloquear"}</button>`);
+  if (u.status === "aprovado")
+    b.push(u.papel === "admin"
+      ? `<button class="btn-rev" onclick="setUsuario('${e}',{papel:'usuario'})">Remover admin</button>`
+      : `<button class="btn-ghost" onclick="setUsuario('${e}',{papel:'admin'})">Tornar admin</button>`);
+  return `<div class="acoes">${b.join("")}</div>`;
 }
 
-async function adicionarAdmin() {
-  const input = document.getElementById("new-admin");
+function renderUsuarios(lista) {
+  const ordem = { pendente: 0, aprovado: 1, bloqueado: 2 };
+  lista.sort((a, b) => ordem[a.status] - ordem[b.status] || a.email.localeCompare(b.email));
+  const pend = lista.filter(u => u.status === "pendente").length;
+  document.getElementById("usr-count").textContent =
+    `${lista.length} pessoa${lista.length !== 1 ? "s" : ""}${pend ? ` · ${pend} aguardando` : ""}`;
+  document.getElementById("usr-tbody").innerHTML = lista.map(u => `<tr>
+      <td>${esc(u.nome) || "—"}<div style="font-family:var(--mono);font-size:11px;color:var(--ink-soft)">${esc(u.email)}</div></td>
+      <td>${u.papel === "admin" ? '<span class="tag tag-admin">Admin</span>' : "Usuário"}</td>
+      <td>${USR_STATUS[u.status] || esc(u.status)}</td>
+      <td style="font-family:var(--mono);font-size:12px;">${fmtData(u.solicitadoEm)}</td>
+      <td>${botoesUsuario(u)}</td>
+    </tr>`).join("");
+}
+
+async function carregarUsuarios() {
+  try { renderUsuarios(await apiAuth({ action: "getUsuarios" })); }
+  catch { /* silencioso */ }
+}
+
+async function setUsuario(email, mudanca) {
+  const msgs = {
+    aprovado: `Liberar acesso para ${email}?`, bloqueado: `Bloquear o acesso de ${email}?`,
+    admin: `Tornar ${email} administrador?`,   usuario: `Remover ${email} dos administradores?`
+  };
+  if (!confirm(msgs[mudanca.status || mudanca.papel])) return;
+  try { renderUsuarios(await apiAuth({ action: "setUsuario", email, ...mudanca })); }
+  catch (e) { alert("Erro: " + e.message); }
+}
+
+async function preAprovar() {
+  const input = document.getElementById("new-user");
   const email = input.value.trim().toLowerCase();
   if (!email) return;
   try {
-    await apiAuth({ action: "addAdmin", email });
+    renderUsuarios(await apiAuth({ action: "setUsuario", email, status: "aprovado" }));
     input.value = "";
-    carregarAdmins();
-  } catch (e) { alert("Erro: " + e.message); }
-}
-
-async function removerAdmin(email) {
-  if (!confirm(`Remover ${email} dos administradores?`)) return;
-  try {
-    await apiAuth({ action: "rmAdmin", email });
-    carregarAdmins();
   } catch (e) { alert("Erro: " + e.message); }
 }
 

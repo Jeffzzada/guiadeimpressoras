@@ -3,9 +3,12 @@
 
    Fluxo:
    - Leitura de estoque é pública (usada pelo indicador do topo).
-   - Registrar movimentação exige login Google @shopee.com.
+   - Camada 1: login Google @shopee.com (ID token verificado).
+   - Camada 2: cada pessoa precisa ser aprovada por um admin (aba
+     "Usuarios"); o 1º login cria a solicitação automaticamente.
+   - Registrar movimentação exige as duas camadas.
      A movimentação entra como "pendente" e NÃO altera o estoque.
-   - Admins (aba "Admins") aprovam após validação física → estoque
+   - Admins aprovam após validação física → estoque
      é atualizado; ou revogam → nada muda (se já aprovada, o efeito
      no estoque é desfeito).
 
@@ -17,12 +20,12 @@
 const SHEET_ID    = "1hxcjBX7q41HRK3-SqdXT7-nS6r5kWVuK3vi3jcF88Ao";
 const ABA_ESTOQUE = "webinventario";
 const ABA_LOG     = "Movimentações";
-const ABA_ADMINS  = "Admins";
+const ABA_USUARIOS = "Usuarios";
 
 // OAuth Client ID (Google Cloud Console → Credenciais). Igual ao do app.js.
 const CLIENT_ID      = "COLE_AQUI_SEU_CLIENT_ID.apps.googleusercontent.com";
 const DOMINIO        = "shopee.com";
-// Admins iniciais (usados enquanto a aba Admins estiver vazia/inexistente)
+// Admins iniciais: gravados como admin aprovado quando a aba Usuarios é criada
 const ADMINS_INICIAIS = [];
 
 const LOG_HEADER = ["ID", "Data", "Modelo", "Tipo", "Qtd", "Turno", "Responsavel",
@@ -44,89 +47,145 @@ function doGet(e) {
 function doPost(e) {
   try {
     const payload = JSON.parse(e.postData.contents);
-    const user = autenticar(payload.token);          // lança erro se inválido
+    const user = autenticar(payload.token);          // camada 1: Google OAuth (lança erro se inválido)
+    const a = payload.action;
 
-    if (payload.action === "whoami")    return resposta(user);
-    if (payload.action === "registrar") return resposta(registrar(payload, user));
-    if (payload.action === "aprovar")   return resposta(revisar(payload.id, "aprovado", user));
-    if (payload.action === "revogar")   return resposta(revisar(payload.id, "revogado", user));
-    if (payload.action === "getAdmins") return resposta(listarAdmins(user));
-    if (payload.action === "addAdmin")  return resposta(alterarAdmin(payload.email, true, user));
-    if (payload.action === "rmAdmin")   return resposta(alterarAdmin(payload.email, false, user));
+    if (a === "whoami")       return resposta(user);
+    // camada 2: permissão individual concedida por um admin
+    if (a === "registrar")    return resposta(registrar(payload, exigirAprovado(user)));
+    if (a === "aprovar")      return resposta(revisar(payload.id, "aprovado", exigirAdmin(user)));
+    if (a === "revogar")      return resposta(revisar(payload.id, "revogado", exigirAdmin(user)));
+    if (a === "getUsuarios")  return resposta(listarUsuarios(exigirAdmin(user)));
+    if (a === "setUsuario")   return resposta(alterarUsuario(payload, exigirAdmin(user)));
     return resposta({ erro: "ação inválida" });
   } catch (err) {
     return resposta({ erro: String(err.message || err) });
   }
 }
 
-/* ── Autenticação ── */
-function autenticar(token) {
+/* ── Camada 1: Google OAuth (ID token) ── */
+function verificarToken(token) {
   if (!token) throw new Error("não autenticado");
 
   const cache = CacheService.getScriptCache();
   const key = "tok_" + Utilities.base64EncodeWebSafe(
     Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, token));
-  let info = cache.get(key);
+  const hit = cache.get(key);
+  if (hit) return JSON.parse(hit);
 
-  if (info) {
-    info = JSON.parse(info);
-  } else {
-    const r = UrlFetchApp.fetch(
-      "https://oauth2.googleapis.com/tokeninfo?id_token=" + encodeURIComponent(token),
-      { muteHttpExceptions: true });
-    if (r.getResponseCode() !== 200) throw new Error("sessão inválida ou expirada");
-    info = JSON.parse(r.getContentText());
-    if (info.aud !== CLIENT_ID)                       throw new Error("token de outro app");
-    if (String(info.email_verified) !== "true")       throw new Error("e-mail não verificado");
-    if (info.hd !== DOMINIO)                          throw new Error("use sua conta @" + DOMINIO);
-    const ttl = Math.min(600, Number(info.exp) - Math.floor(Date.now() / 1000));
-    if (ttl <= 0) throw new Error("sessão expirada");
-    cache.put(key, JSON.stringify(info), ttl);
-  }
-
-  const email = String(info.email).toLowerCase();
-  return { email, nome: info.name || email, isAdmin: getAdmins().indexOf(email) >= 0 };
+  const r = UrlFetchApp.fetch(
+    "https://oauth2.googleapis.com/tokeninfo?id_token=" + encodeURIComponent(token),
+    { muteHttpExceptions: true });
+  if (r.getResponseCode() !== 200) throw new Error("sessão inválida ou expirada");
+  const info = JSON.parse(r.getContentText());
+  if (info.aud !== CLIENT_ID)                 throw new Error("token de outro app");
+  if (String(info.email_verified) !== "true") throw new Error("e-mail não verificado");
+  if (info.hd !== DOMINIO)                    throw new Error("use sua conta @" + DOMINIO);
+  const ttl = Math.min(600, Number(info.exp) - Math.floor(Date.now() / 1000));
+  if (ttl <= 0) throw new Error("sessão expirada");
+  cache.put(key, JSON.stringify(info), ttl);
+  return info;
 }
 
-function getAdmins() {
-  const aba = SpreadsheetApp.openById(SHEET_ID).getSheetByName(ABA_ADMINS);
-  const lista = aba
-    ? aba.getDataRange().getValues().slice(1).map(r => String(r[0]).toLowerCase().trim()).filter(Boolean)
-    : [];
-  return lista.length ? lista : ADMINS_INICIAIS.map(e => e.toLowerCase());
+/* ── Camada 2: permissão por pessoa (aba Usuarios) ──
+   Status: pendente → aprovado | bloqueado     Papel: usuario | admin
+   O primeiro login cria automaticamente uma solicitação "pendente". */
+const USR_HEADER = ["Email", "Nome", "Papel", "Status", "SolicitadoEm", "Revisor", "RevisadoEm"];
+
+function abaUsuarios() {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  let aba = ss.getSheetByName(ABA_USUARIOS);
+  if (!aba) {
+    aba = ss.insertSheet(ABA_USUARIOS);
+    aba.appendRow(USR_HEADER);
+    ADMINS_INICIAIS.forEach(e =>
+      aba.appendRow([e.toLowerCase(), "", "admin", "aprovado", new Date(), "sistema", new Date()]));
+  }
+  return aba;
+}
+
+function lerUsuarios() {
+  const aba = abaUsuarios();
+  const rows = aba.getDataRange().getValues();
+  return {
+    aba,
+    lista: rows.slice(1).map((r, i) => ({
+      linha: i + 2,
+      email: String(r[0]).toLowerCase().trim(), nome: r[1], papel: r[2] || "usuario",
+      status: r[3] || "pendente", solicitadoEm: r[4], revisor: r[5], revisadoEm: r[6]
+    })).filter(u => u.email)
+  };
+}
+
+function autenticar(token) {
+  const info  = verificarToken(token);
+  const email = String(info.email).toLowerCase();
+  const nome  = info.name || email;
+
+  let u = lerUsuarios().lista.find(x => x.email === email);
+  if (!u) {
+    const lock = LockService.getScriptLock(); lock.waitLock(10000);
+    try {
+      const { aba, lista } = lerUsuarios();             // relê dentro do lock
+      u = lista.find(x => x.email === email);
+      if (!u) {
+        aba.appendRow([email, nome, "usuario", "pendente", new Date(), "", ""]);
+        u = { email, nome, papel: "usuario", status: "pendente" };
+      }
+    } finally { lock.releaseLock(); }
+  }
+
+  const aprovado = u.status === "aprovado";
+  return {
+    email, nome,
+    status:  u.status,                                   // pendente | aprovado | bloqueado
+    isAdmin: aprovado && u.papel === "admin",
+    podeRegistrar: aprovado
+  };
+}
+
+function exigirAprovado(user) {
+  if (user.status === "bloqueado") throw new Error("seu acesso foi bloqueado por um admin");
+  if (!user.podeRegistrar)         throw new Error("seu acesso ainda não foi aprovado por um admin");
+  return user;
 }
 
 function exigirAdmin(user) {
   if (!user.isAdmin) throw new Error("apenas administradores");
+  return user;
 }
 
-function listarAdmins(user) {
-  exigirAdmin(user);
-  return getAdmins();
+function listarUsuarios(user) {
+  return lerUsuarios().lista.map(u => ({
+    email: u.email, nome: u.nome, papel: u.papel, status: u.status,
+    solicitadoEm: u.solicitadoEm, revisor: u.revisor, revisadoEm: u.revisadoEm
+  }));
 }
 
-function alterarAdmin(email, adicionar, user) {
-  exigirAdmin(user);
-  email = String(email || "").toLowerCase().trim();
+// payload: { email, status?: "aprovado"|"bloqueado"|"pendente", papel?: "usuario"|"admin" }
+function alterarUsuario(payload, user) {
+  const email = String(payload.email || "").toLowerCase().trim();
   if (!email.endsWith("@" + DOMINIO)) throw new Error("e-mail inválido");
-  if (!adicionar && email === user.email) throw new Error("você não pode remover a si mesmo");
+  if (email === user.email) throw new Error("você não pode alterar o próprio acesso");
+  const status = payload.status, papel = payload.papel;
+  if (status && ["aprovado", "bloqueado", "pendente"].indexOf(status) < 0) throw new Error("status inválido");
+  if (papel  && ["usuario", "admin"].indexOf(papel) < 0)                 throw new Error("papel inválido");
 
   const lock = LockService.getScriptLock(); lock.waitLock(10000);
   try {
-    const ss = SpreadsheetApp.openById(SHEET_ID);
-    let aba = ss.getSheetByName(ABA_ADMINS);
-    if (!aba) {
-      aba = ss.insertSheet(ABA_ADMINS);
-      aba.appendRow(["Email"]);
-      getAdmins().forEach(a => aba.appendRow([a]));   // preserva admins iniciais
+    const { aba, lista } = lerUsuarios();
+    let u = lista.find(x => x.email === email);
+    if (!u) {                                            // admin pode pré-cadastrar alguém
+      aba.appendRow([email, "", papel || "usuario", status || "aprovado", new Date(), user.email, new Date()]);
+    } else {
+      if (papel)  aba.getRange(u.linha, 3).setValue(papel);
+      if (status) aba.getRange(u.linha, 4).setValue(status);
+      aba.getRange(u.linha, 6, 1, 2).setValues([[user.email, new Date()]]);
     }
-    const vals = aba.getDataRange().getValues();
-    const idx = vals.findIndex((r, i) => i > 0 && String(r[0]).toLowerCase().trim() === email);
-    if (adicionar && idx < 0) aba.appendRow([email]);
-    if (!adicionar && idx > 0) aba.deleteRow(idx + 1);
-    return getAdmins();
+    return listarUsuarios(user);
   } finally { lock.releaseLock(); }
 }
+
 
 /* ── Estoque ── */
 function getEstoque() {
