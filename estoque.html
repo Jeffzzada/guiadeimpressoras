@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Estoque de Toners · HP MFP · Shopee TI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+  /* Cor do toner na tabela */
+  .cor-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 7px; vertical-align: middle; flex-shrink: 0; }
+  .cor-cell { display: flex; align-items: center; }
+
+  /* Log entries */
+  .log-table { width: 100%; border-collapse: collapse; }
+  .log-table th {
+    text-align: left; padding: 9px 16px; font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-soft);
+    background: var(--surface); border-bottom: 1px solid var(--border);
+  }
+  .log-table td { padding: 11px 16px; font-size: 13px; border-bottom: 1px solid var(--border); color: var(--ink-mid); }
+  .log-table tr:last-child td { border-bottom: none; }
+  .log-table tr:hover td { background: var(--surface); }
+
+  .tag { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 100px; }
+  .tag-in  { background: var(--success-bg); color: var(--success); }
+  .tag-out { background: var(--warning-bg); color: var(--warning); }
+
+  /* Turno chips */
+  .turno-label {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 11.5px; font-weight: 600; padding: 3px 10px;
+    border-radius: 100px; font-family: var(--mono);
+  }
+  .turno-t1 { background: #E8F4FD; color: #1565C0; }
+  .turno-t2 { background: #FFF3E0; color: #E65100; }
+  .turno-t3 { background: #F3E5F5; color: #6A1B9A; }
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="topnav-brand" href="index.html">
+    <div class="shopee-mark">
+      <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+    </div>
+    <div>
+      <div class="brand-name">Shopee TI</div>
+      <div class="brand-device">HP Color LaserJet MFP</div>
+    </div>
+  </a>
+
+  <div class="nav-tabs">
+    <a class="nav-tab" href="index.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Início
+    </a>
+    <a class="nav-tab" href="conexao.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      Conexão
+    </a>
+    <a class="nav-tab" href="toner.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h10M7 12h6"/></svg>
+      Troca de Toner
+    </a>
+    <a class="nav-tab" href="digitalizacao.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7V4h3M17 4h3v3M20 17v3h-3M7 20H4v-3"/><rect x="8" y="8" width="8" height="8" rx="1"/></svg>
+      Digitalização
+    </a>
+    <a class="nav-tab active" href="estoque.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+      Estoque
+    </a>
+  </div>
+
+  <div class="nav-end">
+    <a class="toner-pill" href="estoque.html" id="toner-pill">
+      <span class="pill-dot"></span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+      Estoque de toners
+    </a>
+  </div>
+</nav>
+
+<main class="page">
+
+  <div class="page-header">
+    <div class="page-eyebrow">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      Acesso restrito · Setor de TI
+    </div>
+    <h1 class="page-title">Controle de toners</h1>
+    <p class="page-desc">Estoque do armário inferior da impressora. Registre toda entrada e saída de toners para manter o controle atualizado.</p>
+  </div>
+
+  <!-- TABELA DE ESTOQUE -->
+  <div class="section">
+    <div class="toner-panel">
+      <div class="panel-head">
+        <div>
+          <div class="panel-title">Estoque atual — Armário TI</div>
+          <div class="panel-sub" id="last-updated">Carregando...</div>
+        </div>
+        <button class="btn-refresh" onclick="loadEstoque(true)">
+          <svg id="refresh-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M23 4v6h-6"/><path d="M1 20v-6h6"/>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+          </svg>
+          Atualizar
+        </button>
+      </div>
+
+      <table class="toner-table">
+        <thead>
+          <tr>
+            <th>Cor / Referência</th>
+            <th>Cheios</th>
+            <th>Vazios</th>
+            <th>Total</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="estoque-tbody">
+          <tr><td colspan="5" style="text-align:center;color:var(--ink-soft);padding:28px;">
+            <span style="display:flex;align-items:center;justify-content:center;gap:8px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+              Carregando dados...
+            </span>
+          </td></tr>
+        </tbody>
+      </table>
+
+      <div class="panel-footer">
+        <div class="footer-note">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          Dados sincronizados com o Google Sheets
+        </div>
+        <button class="btn-primary" onclick="abrirModal()">
+          <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+          Registrar movimentação
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOG DE MOVIMENTAÇÕES -->
+  <div class="section">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border);">
+      <div class="section-title" style="margin-bottom:0;padding-bottom:0;border:none;">Histórico recente</div>
+      <span style="font-size:12px;color:var(--ink-soft)" id="log-count">—</span>
+    </div>
+    <div class="toner-panel">
+      <table class="log-table">
+        <thead>
+          <tr>
+            <th>Data / Hora</th>
+            <th>Toner</th>
+            <th>Movimentação</th>
+            <th>Qtd</th>
+            <th>Turno</th>
+            <th>Responsável</th>
+          </tr>
+        </thead>
+        <tbody id="log-tbody">
+          <tr><td colspan="6" style="text-align:center;color:var(--ink-soft);padding:20px;">Carregando histórico...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-title">Registrar movimentação</div>
+    <div class="modal-sub">Informe a entrada ou saída de toner do armário.</div>
+
+    <div class="form-group">
+      <label class="form-label">Tipo de toner</label>
+      <select class="form-select" id="m-modelo">
+        <option value="W2150XC">Preto (W2150XC)</option>
+        <option value="W2151XC">Ciano (W2151XC)</option>
+        <option value="W2152XC">Amarelo (W2152XC)</option>
+        <option value="W2153XC">Magenta (W2153XC)</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Tipo de movimentação</label>
+      <select class="form-select" id="m-tipo">
+        <option value="entrada_cheio">Entrada — toner cheio no estoque</option>
+        <option value="saida_cheio">Saída — instalando na impressora</option>
+        <option value="entrada_vazio">Entrada — toner vazio indo pro armário</option>
+        <option value="saida_vazio">Saída — toner vazio (descarte)</option>
+      </select>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group" style="flex:1">
+        <label class="form-label">Quantidade</label>
+        <input class="form-input" id="m-qtd" type="number" min="1" max="20" value="1">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Turno</label>
+      <div class="turno-group">
+        <button class="turno-btn selected" data-turno="T1" onclick="selectTurno(this)">T1</button>
+        <button class="turno-btn" data-turno="T2" onclick="selectTurno(this)">T2</button>
+        <button class="turno-btn" data-turno="T3" onclick="selectTurno(this)">T3</button>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Responsável</label>
+      <input class="form-input" id="m-resp" type="text" placeholder="Seu nome">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Observação <span style="font-weight:400;color:var(--ink-soft)">(opcional)</span></label>
+      <input class="form-input" id="m-obs" type="text" placeholder="Ex: NF 12345, Fornecedor XYZ">
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="fecharModal()">Cancelar</button>
+      <button class="btn-submit" id="btn-submit" onclick="submeterMovimentacao()">Registrar</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script>
+const CORES_MAP = {
+  W2150XC: { nome: "Preto",   cor: "#2D2D2D" },
+  W2151XC: { nome: "Ciano",   cor: "#0070C0" },
+  W2152XC: { nome: "Amarelo", cor: "#CCA800" },
+  W2153XC: { nome: "Magenta", cor: "#C0004A" }
+};
+
+const TIPO_LABEL = {
+  entrada_cheio: "Entrada — cheio",
+  saida_cheio:   "Saída — instalado",
+  entrada_vazio: "Entrada — vazio",
+  saida_vazio:   "Saída — descarte"
+};
+
+let turnoSelecionado = "T1";
+let tonerData = [];
+
+function selectTurno(btn) {
+  document.querySelectorAll(".turno-btn").forEach(b => b.classList.remove("selected"));
+  btn.classList.add("selected");
+  turnoSelecionado = btn.dataset.turno;
+}
+
+/* ── ESTOQUE ── */
+async function loadEstoque(force = false) {
+  const icon = document.getElementById("refresh-icon");
+  icon.classList.add("spinning");
+  if (force) sessionStorage.removeItem("tonerData");
+
+  try {
+    tonerData = await fetchTonerData();
+    renderEstoque(tonerData);
+    renderLog();
+  } catch {
+    document.getElementById("estoque-tbody").innerHTML =
+      `<tr><td colspan="5" style="text-align:center;color:var(--ink-soft);padding:24px;">Erro ao carregar. Verifique a conexão.</td></tr>`;
+  }
+  setTimeout(() => icon.classList.remove("spinning"), 600);
+}
+
+function renderEstoque(data) {
+  const tbody = document.getElementById("estoque-tbody");
+  if (!data.length) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--ink-soft);padding:24px;">Nenhum dado encontrado na planilha.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = data.map(row => {
+    const cheios = Number(row.cheios) || 0;
+    const vazios = Number(row.vazios) || 0;
+    const total  = cheios + vazios;
+    const info   = CORES_MAP[row.ref] || { nome: row.ref, cor: "#888" };
+    const status = cheios === 0
+      ? `<span style="color:#C0392B;font-weight:600;font-size:12px;">⚠ Sem estoque</span>`
+      : cheios <= 1
+      ? `<span style="color:#E67E22;font-weight:600;font-size:12px;">⚡ Estoque baixo</span>`
+      : `<span style="color:var(--success);font-weight:600;font-size:12px;">✓ Normal</span>`;
+
+    return `<tr>
+      <td>
+        <div class="cor-cell">
+          <span class="cor-dot" style="background:${info.cor}"></span>
+          <span style="font-weight:500;color:var(--ink)">${info.nome}</span>
+          <span style="font-family:var(--mono);font-size:11px;color:var(--ink-soft);margin-left:8px;">${row.ref}</span>
+        </div>
+      </td>
+      <td><span class="badge-full">${cheios}</span></td>
+      <td><span class="badge-empty">${vazios}</span></td>
+      <td style="font-family:var(--mono);font-size:13px;">${total}</td>
+      <td>${status}</td>
+    </tr>`;
+  }).join("");
+
+  const up = data[0]?.updated ? new Date(data[0].updated).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}) : "—";
+  document.getElementById("last-updated").textContent = `Última sincronização: ${up}`;
+}
+
+/* ── LOG ── */
+async function renderLog() {
+  const tbody = document.getElementById("log-tbody");
+  try {
+    const res = await fetch(`${CONFIG.APPS_SCRIPT_URL}?action=getLog`);
+    const log  = await res.json();
+
+    if (!log.length) {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--ink-soft);padding:20px;">Nenhuma movimentação registrada.</td></tr>`;
+      document.getElementById("log-count").textContent = "0 registros";
+      return;
+    }
+
+    document.getElementById("log-count").textContent = `${log.length} registro${log.length !== 1 ? "s" : ""}`;
+    tbody.innerHTML = log.slice(0, 30).map(r => {
+      const info  = CORES_MAP[r.modelo] || { nome: r.modelo, cor: "#888" };
+      const isIn  = r.tipo?.startsWith("entrada");
+      const data  = r.data ? new Date(r.data).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}) : "—";
+      const turno = r.turno || "—";
+      const turnoClass = turno === "T1" ? "turno-t1" : turno === "T2" ? "turno-t2" : "turno-t3";
+      return `<tr>
+        <td style="font-family:var(--mono);font-size:12px;">${data}</td>
+        <td>
+          <div class="cor-cell">
+            <span class="cor-dot" style="background:${info.cor}"></span>
+            ${info.nome}
+          </div>
+        </td>
+        <td><span class="tag ${isIn ? "tag-in" : "tag-out"}">${TIPO_LABEL[r.tipo] || r.tipo}</span></td>
+        <td style="font-family:var(--mono)">${r.qtd || 1}</td>
+        <td>${turno !== "—" ? `<span class="turno-label ${turnoClass}">${turno}</span>` : "—"}</td>
+        <td>${r.resp || "—"}</td>
+      </tr>`;
+    }).join("");
+  } catch {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--ink-soft);padding:16px;">Histórico indisponível.</td></tr>`;
+  }
+}
+
+/* ── MODAL ── */
+function abrirModal()  { document.getElementById("modal-overlay").classList.add("open"); }
+function fecharModal() { document.getElementById("modal-overlay").classList.remove("open"); }
+document.getElementById("modal-overlay").addEventListener("click", e => { if (e.target === e.currentTarget) fecharModal(); });
+
+async function submeterMovimentacao() {
+  const modelo = document.getElementById("m-modelo").value;
+  const tipo   = document.getElementById("m-tipo").value;
+  const qtd    = parseInt(document.getElementById("m-qtd").value) || 1;
+  const resp   = document.getElementById("m-resp").value.trim();
+  const obs    = document.getElementById("m-obs").value.trim();
+  const turno  = turnoSelecionado;
+
+  if (!resp) {
+    document.getElementById("m-resp").focus();
+    document.getElementById("m-resp").style.borderColor = "var(--shopee)";
+    return;
+  }
+
+  const btn = document.getElementById("btn-submit");
+  btn.textContent = "Registrando...";
+  btn.disabled = true;
+
+  try {
+    const payload = { action: "registrar", modelo, tipo, qtd, resp, obs, turno, data: new Date().toISOString() };
+    await fetch(CONFIG.APPS_SCRIPT_URL, {
+      method: "POST",
+      body: JSON.stringify(payload),
+      headers: { "Content-Type": "application/json" }
+    });
+
+    sessionStorage.removeItem("tonerData");
+    await loadEstoque(true);
+    fecharModal();
+
+    // reset form
+    document.getElementById("m-resp").value = "";
+    document.getElementById("m-obs").value = "";
+    document.getElementById("m-qtd").value = "1";
+    document.querySelectorAll(".turno-btn").forEach((b,i) => b.classList.toggle("selected", i===0));
+    turnoSelecionado = "T1";
+  } catch {
+    alert("Erro ao registrar. Verifique a conexão com o Apps Script.");
+  }
+
+  btn.textContent = "Registrar";
+  btn.disabled = false;
+}
+
+loadEstoque();
+</script>
+</body>
+</html>
