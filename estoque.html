@@ -38,6 +38,33 @@
   .turno-t1 { background: #E8F4FD; color: #1565C0; }
   .turno-t2 { background: #FFF3E0; color: #E65100; }
   .turno-t3 { background: #F3E5F5; color: #6A1B9A; }
+
+  /* Autenticação / aprovação */
+  .auth-bar {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+    padding: 12px 16px; margin-bottom: 24px; border: 1px solid var(--border);
+    border-radius: var(--radius); background: var(--surface); font-size: 13px; color: var(--ink-mid);
+  }
+  .auth-info { display: flex; align-items: center; gap: 8px; }
+  .auth-info svg { width: 15px; height: 15px; flex-shrink: 0; }
+  .auth-user { display: flex; align-items: center; gap: 10px; }
+  .auth-bar [hidden] { display: none !important; }
+  .btn-link { background: none; border: none; color: var(--shopee); font: inherit; font-weight: 600; cursor: pointer; }
+  .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+  .tag-pend  { background: #FFF3E0; color: #E65100; }
+  .tag-rev   { background: #FDECEA; color: #C0392B; }
+  .tag-admin { background: var(--shopee-light); color: var(--shopee-dark); }
+  .row-rev td { opacity: .55; }
+  .acoes { display: flex; gap: 6px; }
+  .btn-ok, .btn-rev {
+    font: inherit; font-size: 11.5px; font-weight: 600; padding: 4px 10px;
+    border-radius: 6px; cursor: pointer; border: 1px solid transparent;
+  }
+  .btn-ghost { background: transparent; color: var(--ink-mid); border-color: var(--border); }
+  .alert-err { background: #FDECEA; border: 1px solid #E8B4AE; color: #C0392B; }
+  #acesso-aviso[hidden] { display: none; }
+  .btn-ok  { background: var(--success); color: #fff; }
+  .btn-rev { background: transparent; color: #C0392B; border-color: #E8B4AE; }
 </style>
 </head>
 <body>
@@ -96,6 +123,26 @@
     <p class="page-desc">Estoque do armário inferior da impressora. Registre toda entrada e saída de toners para manter o controle atualizado.</p>
   </div>
 
+  <!-- LOGIN -->
+  <div class="auth-bar" id="auth-bar">
+    <div class="auth-info" id="auth-info">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      <span>Entre com sua conta <strong>@shopee.com</strong> para registrar movimentações.</span>
+    </div>
+    <div id="gsi-btn"></div>
+    <div class="auth-user" id="auth-user" hidden>
+      <span id="auth-name"></span>
+      <span class="tag tag-admin" id="auth-admin" hidden>Admin</span>
+      <button class="btn-link" onclick="sair()">Sair</button>
+    </div>
+  </div>
+
+  <!-- AVISO DE PERMISSÃO (2ª camada) -->
+  <div class="alert alert-warn" id="acesso-aviso" hidden>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+    <span></span>
+  </div>
+
   <!-- TABELA DE ESTOQUE -->
   <div class="section">
     <div class="toner-panel">
@@ -136,13 +183,31 @@
       <div class="panel-footer">
         <div class="footer-note">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-          Dados sincronizados com o Google Sheets
+          Movimentações só alteram o estoque após aprovação de um admin
         </div>
-        <button class="btn-primary" onclick="abrirModal()">
+        <button class="btn-primary" id="btn-abrir" onclick="abrirModal()" disabled title="Faça login para registrar">
           <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
           Registrar movimentação
         </button>
       </div>
+    </div>
+  </div>
+
+  <!-- PENDENTES (admin) -->
+  <div class="section" id="sec-pendentes" hidden>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border);">
+      <div class="section-title" style="margin-bottom:0;padding-bottom:0;border:none;">Aguardando validação física</div>
+      <span style="font-size:12px;color:var(--ink-soft)" id="pend-count">—</span>
+    </div>
+    <div class="toner-panel">
+      <table class="log-table">
+        <thead>
+          <tr>
+            <th>Data / Hora</th><th>Toner</th><th>Movimentação</th><th>Qtd</th><th>Responsável</th><th>Obs</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="pend-tbody"></tbody>
+      </table>
     </div>
   </div>
 
@@ -162,12 +227,34 @@
             <th>Qtd</th>
             <th>Turno</th>
             <th>Responsável</th>
+            <th>Situação</th>
+            <th class="col-admin" hidden></th>
           </tr>
         </thead>
         <tbody id="log-tbody">
-          <tr><td colspan="6" style="text-align:center;color:var(--ink-soft);padding:20px;">Carregando histórico...</td></tr>
+          <tr><td colspan="8" style="text-align:center;color:var(--ink-soft);padding:20px;">Carregando histórico...</td></tr>
         </tbody>
       </table>
+    </div>
+  </div>
+
+  <!-- USUÁRIOS E PERMISSÕES (admin) -->
+  <div class="section" id="sec-usuarios" hidden>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border);">
+      <div class="section-title" style="margin-bottom:0;padding-bottom:0;border:none;">Usuários e permissões</div>
+      <span style="font-size:12px;color:var(--ink-soft)" id="usr-count">—</span>
+    </div>
+    <div class="toner-panel">
+      <table class="log-table">
+        <thead>
+          <tr><th>Pessoa</th><th>Papel</th><th>Acesso</th><th>Solicitado em</th><th></th></tr>
+        </thead>
+        <tbody id="usr-tbody"></tbody>
+      </table>
+      <div style="display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--border);">
+        <input class="form-input" id="new-user" type="email" placeholder="Pré-aprovar: nome@shopee.com" style="flex:1">
+        <button class="btn-primary" onclick="preAprovar()">Liberar acesso</button>
+      </div>
     </div>
   </div>
 
@@ -177,7 +264,7 @@
 <div class="modal-overlay" id="modal-overlay">
   <div class="modal">
     <div class="modal-title">Registrar movimentação</div>
-    <div class="modal-sub">Informe a entrada ou saída de toner do armário.</div>
+    <div class="modal-sub">Fica <strong>pendente</strong> até um admin validar fisicamente no armário.</div>
 
     <div class="form-group">
       <label class="form-label">Tipo de toner</label>
@@ -217,12 +304,12 @@
 
     <div class="form-group">
       <label class="form-label">Responsável</label>
-      <input class="form-input" id="m-resp" type="text" placeholder="Seu nome">
+      <input class="form-input" id="m-resp" type="text" disabled>
     </div>
 
     <div class="form-group">
       <label class="form-label">Observação <span style="font-weight:400;color:var(--ink-soft)">(opcional)</span></label>
-      <input class="form-input" id="m-obs" type="text" placeholder="Ex: NF 12345, Fornecedor XYZ">
+      <input class="form-input" id="m-obs" type="text" maxlength="200" placeholder="Ex: NF 12345, Fornecedor XYZ">
     </div>
 
     <div class="modal-actions">
@@ -232,6 +319,7 @@
   </div>
 </div>
 
+<script src="https://accounts.google.com/gsi/client" async defer onload="initAuth()"></script>
 <script src="app.js"></script>
 <script>
 const CORES_MAP = {
@@ -248,13 +336,114 @@ const TIPO_LABEL = {
   saida_vazio:   "Saída — descarte"
 };
 
+const STATUS_LABEL = {
+  pendente: '<span class="tag tag-pend">Pendente</span>',
+  aprovado: '<span class="tag tag-in">Aprovado</span>',
+  revogado: '<span class="tag tag-rev">Revogado</span>'
+};
+
 let turnoSelecionado = "T1";
 let tonerData = [];
+let usuario = null;   // { email, nome, isAdmin }
+let idToken = sessionStorage.getItem("idToken");
+
+/* ── Utilitários ── */
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c =>
+  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const fmtData = (d, ano) => d ? new Date(d).toLocaleString("pt-BR",
+  { day: "2-digit", month: "2-digit", ...(ano ? { year: "numeric" } : {}), hour: "2-digit", minute: "2-digit" }) : "—";
+
+function tonerCell(modelo) {
+  const info = CORES_MAP[modelo] || { nome: modelo, cor: "#888" };
+  return `<div class="cor-cell"><span class="cor-dot" style="background:${info.cor}"></span>${esc(info.nome)}</div>`;
+}
 
 function selectTurno(btn) {
   document.querySelectorAll(".turno-btn").forEach(b => b.classList.remove("selected"));
   btn.classList.add("selected");
   turnoSelecionado = btn.dataset.turno;
+}
+
+/* ── AUTENTICAÇÃO (Google Identity Services) ── */
+function initAuth() {
+  google.accounts.id.initialize({
+    client_id: CONFIG.GOOGLE_CLIENT_ID,
+    hd: "shopee.com",
+    callback: r => entrar(r.credential),
+    auto_select: true
+  });
+  google.accounts.id.renderButton(document.getElementById("gsi-btn"),
+    { theme: "outline", size: "medium", text: "signin_with", locale: "pt-BR" });
+  if (idToken) entrar(idToken, true);
+  else google.accounts.id.prompt();
+}
+
+async function entrar(token, silencioso = false) {
+  try {
+    usuario = await apiPost({ action: "whoami", token });
+    idToken = token;
+    sessionStorage.setItem("idToken", token);
+  } catch (e) {
+    usuario = null; idToken = null;
+    sessionStorage.removeItem("idToken");
+    if (!silencioso) alert("Não foi possível entrar: " + e.message);
+  }
+  atualizarUIAuth();
+  renderLog();
+}
+
+function sair() {
+  google.accounts.id.disableAutoSelect();
+  usuario = null; idToken = null;
+  sessionStorage.removeItem("idToken");
+  atualizarUIAuth();
+  renderLog();
+}
+
+// Chamada autenticada; se a sessão expirou, desloga e pede login novamente
+async function apiAuth(payload) {
+  if (!idToken) throw new Error("faça login");
+  try {
+    return await apiPost({ ...payload, token: idToken });
+  } catch (e) {
+    if (/sess|autenticado|expirad/i.test(e.message)) {
+      sair();
+      google.accounts.id.prompt();
+      throw new Error("Sua sessão expirou. Entre novamente.");
+    }
+    throw e;
+  }
+}
+
+function atualizarUIAuth() {
+  const logado = !!usuario;
+  document.getElementById("auth-info").hidden = logado;
+  document.getElementById("gsi-btn").hidden   = logado;
+  document.getElementById("auth-user").hidden = !logado;
+  document.getElementById("auth-name").textContent = logado ? `${usuario.nome} · ${usuario.email}` : "";
+  document.getElementById("auth-admin").hidden = !(logado && usuario.isAdmin);
+
+  const btn = document.getElementById("btn-abrir");
+  const pode = logado && usuario.podeRegistrar;
+  btn.disabled = !pode;
+  btn.title = !logado ? "Faça login para registrar"
+            : !pode   ? "Seu acesso precisa ser aprovado por um admin" : "";
+
+  // aviso da 2ª camada (permissão individual)
+  const aviso = document.getElementById("acesso-aviso");
+  aviso.hidden = !logado || pode;
+  if (logado && !pode) {
+    aviso.className = usuario.status === "bloqueado" ? "alert alert-err" : "alert alert-warn";
+    aviso.querySelector("span").innerHTML = usuario.status === "bloqueado"
+      ? "<strong>Acesso bloqueado.</strong> Fale com a equipe de TI se achar que é um engano."
+      : "<strong>Solicitação de acesso enviada.</strong> Um admin precisa liberar sua conta antes que você possa registrar movimentações. Recarregue a página depois da aprovação.";
+  }
+
+  const admin = logado && usuario.isAdmin;
+  document.getElementById("sec-pendentes").hidden = !admin;
+  document.getElementById("sec-usuarios").hidden  = !admin;
+  document.querySelectorAll(".col-admin").forEach(el => el.hidden = !admin);
+  if (admin) carregarUsuarios();
 }
 
 /* ── ESTOQUE ── */
@@ -296,8 +485,8 @@ function renderEstoque(data) {
       <td>
         <div class="cor-cell">
           <span class="cor-dot" style="background:${info.cor}"></span>
-          <span style="font-weight:500;color:var(--ink)">${info.nome}</span>
-          <span style="font-family:var(--mono);font-size:11px;color:var(--ink-soft);margin-left:8px;">${row.ref}</span>
+          <span style="font-weight:500;color:var(--ink)">${esc(info.nome)}</span>
+          <span style="font-family:var(--mono);font-size:11px;color:var(--ink-soft);margin-left:8px;">${esc(row.ref)}</span>
         </div>
       </td>
       <td><span class="badge-full">${cheios}</span></td>
@@ -307,51 +496,148 @@ function renderEstoque(data) {
     </tr>`;
   }).join("");
 
-  const up = data[0]?.updated ? new Date(data[0].updated).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}) : "—";
-  document.getElementById("last-updated").textContent = `Última sincronização: ${up}`;
+  document.getElementById("last-updated").textContent = `Última sincronização: ${fmtData(data[0]?.updated, true)}`;
 }
 
-/* ── LOG ── */
+/* ── LOG + PENDENTES ── */
+function acoesAdmin(r) {
+  if (r.status === "revogado" || !r.id) return "";
+  const aprovar = r.status === "pendente"
+    ? `<button class="btn-ok" onclick="revisar('${esc(r.id)}','aprovar')">Aprovar</button>` : "";
+  return `<div class="acoes">${aprovar}<button class="btn-rev" onclick="revisar('${esc(r.id)}','revogar')">Revogar</button></div>`;
+}
+
 async function renderLog() {
   const tbody = document.getElementById("log-tbody");
+  const admin = !!usuario?.isAdmin;
   try {
     const res = await fetch(`${CONFIG.APPS_SCRIPT_URL}?action=getLog`);
-    const log  = await res.json();
+    const log = await res.json();
+    if (log.erro) throw new Error(log.erro);
+
+    if (admin) renderPendentes(log.filter(r => r.status === "pendente"));
 
     if (!log.length) {
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--ink-soft);padding:20px;">Nenhuma movimentação registrada.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--ink-soft);padding:20px;">Nenhuma movimentação registrada.</td></tr>`;
       document.getElementById("log-count").textContent = "0 registros";
       return;
     }
 
     document.getElementById("log-count").textContent = `${log.length} registro${log.length !== 1 ? "s" : ""}`;
     tbody.innerHTML = log.slice(0, 30).map(r => {
-      const info  = CORES_MAP[r.modelo] || { nome: r.modelo, cor: "#888" };
       const isIn  = r.tipo?.startsWith("entrada");
-      const data  = r.data ? new Date(r.data).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}) : "—";
       const turno = r.turno || "—";
       const turnoClass = turno === "T1" ? "turno-t1" : turno === "T2" ? "turno-t2" : "turno-t3";
-      return `<tr>
-        <td style="font-family:var(--mono);font-size:12px;">${data}</td>
-        <td>
-          <div class="cor-cell">
-            <span class="cor-dot" style="background:${info.cor}"></span>
-            ${info.nome}
-          </div>
-        </td>
-        <td><span class="tag ${isIn ? "tag-in" : "tag-out"}">${TIPO_LABEL[r.tipo] || r.tipo}</span></td>
-        <td style="font-family:var(--mono)">${r.qtd || 1}</td>
-        <td>${turno !== "—" ? `<span class="turno-label ${turnoClass}">${turno}</span>` : "—"}</td>
-        <td>${r.resp || "—"}</td>
+      const revInfo = r.revisor ? ` title="por ${esc(r.revisor)} em ${esc(fmtData(r.revisadoEm))}"` : "";
+      return `<tr${r.status === "revogado" ? ' class="row-rev"' : ""}>
+        <td style="font-family:var(--mono);font-size:12px;">${fmtData(r.data)}</td>
+        <td>${tonerCell(r.modelo)}</td>
+        <td><span class="tag ${isIn ? "tag-in" : "tag-out"}">${esc(TIPO_LABEL[r.tipo] || r.tipo)}</span></td>
+        <td style="font-family:var(--mono)">${Number(r.qtd) || 1}</td>
+        <td>${turno !== "—" ? `<span class="turno-label ${turnoClass}">${esc(turno)}</span>` : "—"}</td>
+        <td>${esc(r.resp) || "—"}</td>
+        <td${revInfo}>${STATUS_LABEL[r.status] || esc(r.status)}</td>
+        ${admin ? `<td class="col-admin">${acoesAdmin(r)}</td>` : ""}
       </tr>`;
     }).join("");
   } catch {
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--ink-soft);padding:16px;">Histórico indisponível.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--ink-soft);padding:16px;">Histórico indisponível.</td></tr>`;
   }
 }
 
+function renderPendentes(pend) {
+  document.getElementById("pend-count").textContent = `${pend.length} pendente${pend.length !== 1 ? "s" : ""}`;
+  document.getElementById("pend-tbody").innerHTML = pend.length
+    ? pend.map(r => `<tr>
+        <td style="font-family:var(--mono);font-size:12px;">${fmtData(r.data)}</td>
+        <td>${tonerCell(r.modelo)}</td>
+        <td><span class="tag ${r.tipo?.startsWith("entrada") ? "tag-in" : "tag-out"}">${esc(TIPO_LABEL[r.tipo] || r.tipo)}</span></td>
+        <td style="font-family:var(--mono)">${Number(r.qtd) || 1}</td>
+        <td>${esc(r.resp) || "—"}</td>
+        <td>${esc(r.obs) || "—"}</td>
+        <td>${acoesAdmin(r)}</td>
+      </tr>`).join("")
+    : `<tr><td colspan="7" style="text-align:center;color:var(--ink-soft);padding:16px;">Nada aguardando validação.</td></tr>`;
+}
+
+async function revisar(id, acao) {
+  const msg = acao === "aprovar"
+    ? "Confirma que conferiu fisicamente no armário? O estoque será atualizado."
+    : "Revogar esta movimentação? Se já aprovada, o efeito no estoque será desfeito.";
+  if (!confirm(msg)) return;
+  try {
+    await apiAuth({ action: acao, id });
+    await loadEstoque(true);
+  } catch (e) {
+    alert("Erro: " + e.message);
+  }
+}
+
+/* ── USUÁRIOS / PERMISSÕES (admin) ── */
+const USR_STATUS = {
+  pendente:  '<span class="tag tag-pend">Aguardando</span>',
+  aprovado:  '<span class="tag tag-in">Aprovado</span>',
+  bloqueado: '<span class="tag tag-rev">Bloqueado</span>'
+};
+
+function botoesUsuario(u) {
+  if (u.email === usuario.email) return '<span style="font-size:11px;color:var(--ink-soft)">você</span>';
+  const e = esc(u.email), b = [];
+  if (u.status !== "aprovado")  b.push(`<button class="btn-ok"  onclick="setUsuario('${e}',{status:'aprovado'})">Aprovar</button>`);
+  if (u.status !== "bloqueado") b.push(`<button class="btn-rev" onclick="setUsuario('${e}',{status:'bloqueado'})">${u.status === "pendente" ? "Recusar" : "Bloquear"}</button>`);
+  if (u.status === "aprovado")
+    b.push(u.papel === "admin"
+      ? `<button class="btn-rev" onclick="setUsuario('${e}',{papel:'usuario'})">Remover admin</button>`
+      : `<button class="btn-ghost" onclick="setUsuario('${e}',{papel:'admin'})">Tornar admin</button>`);
+  return `<div class="acoes">${b.join("")}</div>`;
+}
+
+function renderUsuarios(lista) {
+  const ordem = { pendente: 0, aprovado: 1, bloqueado: 2 };
+  lista.sort((a, b) => ordem[a.status] - ordem[b.status] || a.email.localeCompare(b.email));
+  const pend = lista.filter(u => u.status === "pendente").length;
+  document.getElementById("usr-count").textContent =
+    `${lista.length} pessoa${lista.length !== 1 ? "s" : ""}${pend ? ` · ${pend} aguardando` : ""}`;
+  document.getElementById("usr-tbody").innerHTML = lista.map(u => `<tr>
+      <td>${esc(u.nome) || "—"}<div style="font-family:var(--mono);font-size:11px;color:var(--ink-soft)">${esc(u.email)}</div></td>
+      <td>${u.papel === "admin" ? '<span class="tag tag-admin">Admin</span>' : "Usuário"}</td>
+      <td>${USR_STATUS[u.status] || esc(u.status)}</td>
+      <td style="font-family:var(--mono);font-size:12px;">${fmtData(u.solicitadoEm)}</td>
+      <td>${botoesUsuario(u)}</td>
+    </tr>`).join("");
+}
+
+async function carregarUsuarios() {
+  try { renderUsuarios(await apiAuth({ action: "getUsuarios" })); }
+  catch { /* silencioso */ }
+}
+
+async function setUsuario(email, mudanca) {
+  const msgs = {
+    aprovado: `Liberar acesso para ${email}?`, bloqueado: `Bloquear o acesso de ${email}?`,
+    admin: `Tornar ${email} administrador?`,   usuario: `Remover ${email} dos administradores?`
+  };
+  if (!confirm(msgs[mudanca.status || mudanca.papel])) return;
+  try { renderUsuarios(await apiAuth({ action: "setUsuario", email, ...mudanca })); }
+  catch (e) { alert("Erro: " + e.message); }
+}
+
+async function preAprovar() {
+  const input = document.getElementById("new-user");
+  const email = input.value.trim().toLowerCase();
+  if (!email) return;
+  try {
+    renderUsuarios(await apiAuth({ action: "setUsuario", email, status: "aprovado" }));
+    input.value = "";
+  } catch (e) { alert("Erro: " + e.message); }
+}
+
 /* ── MODAL ── */
-function abrirModal()  { document.getElementById("modal-overlay").classList.add("open"); }
+function abrirModal() {
+  if (!usuario) return;
+  document.getElementById("m-resp").value = usuario.nome;
+  document.getElementById("modal-overlay").classList.add("open");
+}
 function fecharModal() { document.getElementById("modal-overlay").classList.remove("open"); }
 document.getElementById("modal-overlay").addEventListener("click", e => { if (e.target === e.currentTarget) fecharModal(); });
 
@@ -359,40 +645,26 @@ async function submeterMovimentacao() {
   const modelo = document.getElementById("m-modelo").value;
   const tipo   = document.getElementById("m-tipo").value;
   const qtd    = parseInt(document.getElementById("m-qtd").value) || 1;
-  const resp   = document.getElementById("m-resp").value.trim();
   const obs    = document.getElementById("m-obs").value.trim();
   const turno  = turnoSelecionado;
-
-  if (!resp) {
-    document.getElementById("m-resp").focus();
-    document.getElementById("m-resp").style.borderColor = "var(--shopee)";
-    return;
-  }
 
   const btn = document.getElementById("btn-submit");
   btn.textContent = "Registrando...";
   btn.disabled = true;
 
   try {
-    const payload = { action: "registrar", modelo, tipo, qtd, resp, obs, turno, data: new Date().toISOString() };
-    await fetch(CONFIG.APPS_SCRIPT_URL, {
-      method: "POST",
-      body: JSON.stringify(payload),
-      headers: { "Content-Type": "application/json" }
-    });
-
-    sessionStorage.removeItem("tonerData");
-    await loadEstoque(true);
+    await apiAuth({ action: "registrar", modelo, tipo, qtd, obs, turno });
     fecharModal();
+    await renderLog();
 
     // reset form
-    document.getElementById("m-resp").value = "";
     document.getElementById("m-obs").value = "";
     document.getElementById("m-qtd").value = "1";
     document.querySelectorAll(".turno-btn").forEach((b,i) => b.classList.toggle("selected", i===0));
     turnoSelecionado = "T1";
-  } catch {
-    alert("Erro ao registrar. Verifique a conexão com o Apps Script.");
+    alert("Movimentação registrada! Aguardando validação de um admin.");
+  } catch (e) {
+    alert("Erro ao registrar: " + e.message);
   }
 
   btn.textContent = "Registrar";

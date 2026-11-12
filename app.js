@@ -1,9 +1,25 @@
-/* ── CONFIG ── */
+/* ── CONFIG ──
+   Valores públicos por natureza: a segurança é garantida no backend
+   (Apps Script), que verifica login Google + permissão de cada pessoa. */
 const CONFIG = {
-  SHEET_ID:        "1hxcjBX7q41HRK3-SqdXT7-nS6r5kWVuK3vi3jcF88Ao",
-  SHEET_TAB:       "webinventario",
-  APPS_SCRIPT_URL: "https://script.googhttps://script.google.com/a/macros/shopee.com/s/AKfycbz1vBA9Ex0uEUZSIHugGK-__ao2L5C00RUOQhpBzVdUmj7uBL4k8rcEUqVhouJJM23C/execle.com/a/macros/shopee.com/s/AKfycbz8hLmctZmZYNwIVG3D4XFBVuDoMRwxk7SzMcxo8DFRtW9Le9TdaAeaYA45KWTTx82c/exec"
+  // URL da implantação do Apps Script (termina em /exec)
+  APPS_SCRIPT_URL: "COLE_AQUI_A_URL_DA_IMPLANTACAO/exec",
+  // OAuth Client ID (mesmo valor de CLIENT_ID no Code.gs)
+  GOOGLE_CLIENT_ID: "COLE_AQUI_SEU_CLIENT_ID.apps.googleusercontent.com"
 };
+
+/* ── API POST ──
+   text/plain evita o preflight CORS, que o Apps Script não suporta. */
+async function apiPost(payload) {
+  const res = await fetch(CONFIG.APPS_SCRIPT_URL, {
+    method: "POST",
+    body: JSON.stringify(payload),
+    headers: { "Content-Type": "text/plain;charset=utf-8" }
+  });
+  const data = await res.json();
+  if (data && data.erro) throw new Error(data.erro);
+  return data;
+}
 
 const TONERS = [
   { ref: "W2150XC", nome: "Preto",   cor: "#1A1A1A" },
