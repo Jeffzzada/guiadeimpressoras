@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="/assets/shopee.ico">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Painel Admin · Validação de Estoque · Shopee TI</title>
+<meta name="description" content="Painel administrativo protegido por OAuth para validação de movimentações do estoque de TI.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+  .admin-user-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 18px;
+    margin-bottom: 24px;
+  }
+
+  .admin-user-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  .admin-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--shopee-light);
+    color: var(--shopee);
+    font-weight: 700;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+  .admin-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+  .admin-name {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .admin-email {
+    font-size: 12px;
+    color: var(--ink-soft);
+    font-family: var(--mono);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .demo-chip {
+    font-size: 10.5px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 100px;
+    background: var(--warning-bg);
+    color: var(--warning);
+  }
+
+  .btn-logout {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--ink-mid);
+    font-family: var(--sans);
+    font-size: 12.5px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+    flex-shrink: 0;
+  }
+  .btn-logout:hover {
+    border-color: #C0392B;
+    color: #C0392B;
+    background: rgba(192, 57, 43, 0.06);
+  }
+  .btn-logout svg { width: 14px; height: 14px; }
+
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin-bottom: 28px;
+  }
+  .kpi-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+  }
+  .kpi-label {
+    font-size: 11.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+  }
+  .kpi-value {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--ink);
+    font-family: var(--mono);
+    letter-spacing: -0.02em;
+  }
+  .kpi-sub { font-size: 12px; color: var(--ink-soft); margin-top: 4px; }
+
+  .filter-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 12px 18px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .filter-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+  .filter-tab {
+    padding: 5px 12px;
+    border-radius: 100px;
+    border: 1px solid var(--border);
+    background: var(--white);
+    color: var(--ink-mid);
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .filter-tab.active {
+    background: var(--shopee);
+    border-color: var(--shopee);
+    color: white;
+  }
+
+  .search-input {
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--white);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 12.5px;
+    min-width: 220px;
+  }
+  .search-input:focus {
+    outline: none;
+    border-color: var(--shopee);
+  }
+
+  .val-table { width: 100%; border-collapse: collapse; }
+  .val-table th {
+    text-align: left;
+    padding: 10px 16px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-soft);
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  .val-table td {
+    padding: 12px 16px;
+    font-size: 13px;
+    border-bottom: 1px solid var(--border);
+    color: var(--ink-mid);
+    vertical-align: middle;
+  }
+  .val-table tr:last-child td { border-bottom: none; }
+  .val-table tr:hover td { background: var(--surface); }
+
+  .cor-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 7px; flex-shrink: 0; }
+  .cor-cell { display: flex; align-items: center; }
+
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 100px;
+  }
+  .status-pendente { background: var(--warning-bg); color: var(--warning); }
+  .status-validado { background: var(--success-bg); color: var(--success); }
+  .status-divergente { background: #FDECEA; color: #9E2A1C; }
+
+  .action-group { display: flex; gap: 6px; }
+  .btn-val {
+    padding: 5px 10px;
+    border-radius: 5px;
+    border: 1px solid var(--border);
+    background: var(--white);
+    color: var(--ink-mid);
+    font-family: var(--sans);
+    font-size: 11.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-val.approve:hover { border-color: var(--success); color: var(--success); background: var(--success-bg); }
+  .btn-val.reject:hover  { border-color: #C0392B; color: #C0392B; background: rgba(192,57,43,0.08); }
+
+  @media (max-width: 700px) {
+    .kpi-grid { grid-template-columns: 1fr; }
+    .admin-user-bar { flex-direction: column; align-items: flex-start; }
+    .val-table { display: block; overflow-x: auto; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="topnav-brand" href="index.html">
+    <div class="shopee-mark">
+      <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+    </div>
+    <div>
+      <div class="brand-name">Shopee TI</div>
+      <div class="brand-device">HP Color</div>
+    </div>
+  </a>
+
+  <div class="nav-tabs">
+    <a class="nav-tab" href="index.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Início
+    </a>
+    <a class="nav-tab" href="estoque.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+      Estoque
+    </a>
+    <a class="nav-tab active" href="admin.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      Admin TI
+    </a>
+  </div>
+
+  <div class="nav-end">
+    <a class="toner-pill" href="estoque.html" id="toner-pill">
+      <span class="pill-dot"></span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+      Estoque de toners
+    </a>
+  </div>
+</nav>
+
+<main class="page">
+  <div class="page-header">
+    <div class="page-eyebrow">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      Painel Administrativo · Sessão OAuth
+    </div>
+    <h1 class="page-title">Validação do Estoque de TI</h1>
+    <p class="page-desc">Audite e valide as movimentações de toners registradas pela operação para manter a acuracidade do inventário.</p>
+  </div>
+
+  <div class="admin-user-bar">
+    <div class="admin-user-info">
+      <div class="admin-avatar" id="admin-avatar">TI</div>
+      <div style="min-width:0;">
+        <div class="admin-name">
+          <span id="admin-name">Administrador</span>
+          <span class="demo-chip" id="demo-chip" style="display:none;">Modo Preview</span>
+        </div>
+        <div class="admin-email" id="admin-email">—</div>
+      </div>
+    </div>
+    <button type="button" class="btn-logout" onclick="AUTH.logout()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+        <polyline points="16 17 21 12 16 7"/>
+        <line x1="21" y1="12" x2="9" y2="12"/>
+      </svg>
+      Sair
+    </button>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-label">Toners Cheios</div>
+      <div class="kpi-value" id="kpi-cheios">—</div>
+      <div class="kpi-sub">Disponíveis no armário TI</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Toners Vazios</div>
+      <div class="kpi-value" id="kpi-vazios">—</div>
+      <div class="kpi-sub">Aguardando descarte / coleta</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Pendentes de Validação</div>
+      <div class="kpi-value" id="kpi-pendentes">—</div>
+      <div class="kpi-sub">Movimentações recentes</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="toner-panel">
+      <div class="panel-head">
+        <div>
+          <div class="panel-title">Fila de validação de movimentações</div>
+          <div class="panel-sub" id="admin-sync-status">Carregando registros...</div>
+        </div>
+        <button class="btn-refresh" onclick="carregarPainel()">
+          <svg id="refresh-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M23 4v6h-6"/><path d="M1 20v-6h6"/>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+          </svg>
+          Atualizar
+        </button>
+      </div>
+
+      <div class="filter-bar">
+        <div class="filter-tabs">
+          <button type="button" class="filter-tab active" data-filter="todos" onclick="setFilter(this)">Todos</button>
+          <button type="button" class="filter-tab" data-filter="pendente" onclick="setFilter(this)">Pendentes</button>
+          <button type="button" class="filter-tab" data-filter="validado" onclick="setFilter(this)">Validados</button>
+          <button type="button" class="filter-tab" data-filter="divergente" onclick="setFilter(this)">Divergentes</button>
+        </div>
+        <input type="search" class="search-input" id="search-input" placeholder="Buscar por responsável ou toner..." oninput="renderTabela()">
+      </div>
+
+      <table class="val-table">
+        <thead>
+          <tr>
+            <th>Data / Hora</th>
+            <th>Toner</th>
+            <th>Movimentação</th>
+            <th>Qtd</th>
+            <th>Responsável</th>
+            <th>Status</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="val-tbody">
+          <tr><td colspan="7" style="text-align:center;color:var(--ink-soft);padding:24px;">Carregando registros...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<script src="app.js"></script>
+<script src="auth.js"></script>
+<script>
+const session = AUTH.requireAdmin();
+const VALIDACOES_KEY = "tiValidacoesEstoque";
+
+const CORES_MAP = {
+  W2150XC: { nome: "Preto",   cor: "#2D2D2D" },
+  W2151XC: { nome: "Ciano",   cor: "#0070C0" },
+  W2152XC: { nome: "Amarelo", cor: "#CCA800" },
+  W2153XC: { nome: "Magenta", cor: "#C0004A" }
+};
+
+const TIPO_LABEL = {
+  entrada_cheio: "Entrada — cheio",
+  saida_cheio:   "Saída — instalado",
+  entrada_vazio: "Entrada — vazio",
+  saida_vazio:   "Saída — descarte"
+};
+
+let logs = [];
+let filtroAtual = "todos";
+
+if (session) {
+  document.getElementById("admin-name").textContent = session.name;
+  document.getElementById("admin-email").textContent = session.email;
+  if (session.isDemo) {
+    document.getElementById("demo-chip").style.display = "inline-block";
+  }
+  const avatarEl = document.getElementById("admin-avatar");
+  if (session.picture) {
+    avatarEl.innerHTML = `<img src="${session.picture}" alt="${session.name}">`;
+  } else {
+    avatarEl.textContent = session.name.slice(0, 2).toUpperCase();
+  }
+}
+
+function getValidacoes() {
+  try {
+    return JSON.parse(localStorage.getItem(VALIDACOES_KEY) || "{}");
+  } catch {
+    return {};
+  }
+}
+
+function getRowId(r, idx) {
+  return `${r.data || idx}_${r.modelo || ""}_${r.resp || ""}`;
+}
+
+function setFilter(btn) {
+  document.querySelectorAll(".filter-tab").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  filtroAtual = btn.dataset.filter;
+  renderTabela();
+}
+
+async function validarMovimentacao(rowId, status) {
+  const validacoes = getValidacoes();
+  validacoes[rowId] = {
+    status,
+    validadoPor: session?.email || "admin",
+    validadoEm: new Date().toISOString()
+  };
+  localStorage.setItem(VALIDACOES_KEY, JSON.stringify(validacoes));
+  renderTabela();
+
+  try {
+    await fetch(CONFIG.APPS_SCRIPT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "validar",
+        id: rowId,
+        status,
+        validadoPor: session?.email,
+        validadoEm: validacoes[rowId].validadoEm
+      })
+    });
+  } catch { /* fallback local já salvo */ }
+}
+
+function renderTabela() {
+  const tbody = document.getElementById("val-tbody");
+  const query = (document.getElementById("search-input").value || "").trim().toLowerCase();
+  const validacoes = getValidacoes();
+
+  let pendentesCount = 0;
+  const enriched = logs.map((r, idx) => {
+    const id = getRowId(r, idx);
+    const val = validacoes[id];
+    const status = val?.status || r.validacao || "pendente";
+    if (status === "pendente") pendentesCount++;
+    return { ...r, _id: id, _status: status, _val: val };
+  });
+
+  document.getElementById("kpi-pendentes").textContent = pendentesCount;
+
+  const filtered = enriched.filter(r => {
+    if (filtroAtual !== "todos" && r._status !== filtroAtual) return false;
+    if (query) {
+      const info = CORES_MAP[r.modelo] || { nome: r.modelo || "" };
+      const text = `${info.nome} ${r.modelo || ""} ${r.resp || ""} ${r.turno || ""}`.toLowerCase();
+      if (!text.includes(query)) return false;
+    }
+    return true;
+  });
+
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--ink-soft);padding:24px;">Nenhuma movimentação encontrada para este filtro.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.slice(0, 50).map(r => {
+    const info = CORES_MAP[r.modelo] || { nome: r.modelo || "—", cor: "#888" };
+    const dataStr = r.data
+      ? new Date(r.data).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
+      : "—";
+    const statusMap = {
+      pendente:   `<span class="status-pill status-pendente">Pendente</span>`,
+      validado:   `<span class="status-pill status-validado">Validado</span>`,
+      divergente: `<span class="status-pill status-divergente">Divergente</span>`
+    };
+    return `<tr>
+      <td style="font-family:var(--mono);font-size:12px;">${dataStr}</td>
+      <td>
+        <div class="cor-cell">
+          <span class="cor-dot" style="background:${info.cor}"></span>
+          <span>${info.nome}</span>
+        </div>
+      </td>
+      <td>${TIPO_LABEL[r.tipo] || r.tipo || "—"}</td>
+      <td style="font-family:var(--mono);">${r.qtd || 1}</td>
+      <td>${r.resp || "—"}</td>
+      <td>${statusMap[r._status] || statusMap.pendente}</td>
+      <td>
+        <div class="action-group">
+          <button type="button" class="btn-val approve" onclick="validarMovimentacao('${r._id}', 'validado')">Validar</button>
+          <button type="button" class="btn-val reject" onclick="validarMovimentacao('${r._id}', 'divergente')">Divergente</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join("");
+}
+
+async function carregarPainel() {
+  const icon = document.getElementById("refresh-icon");
+  icon.classList.add("spinning");
+
+  try {
+    sessionStorage.removeItem("tonerData");
+    const estoque = await fetchTonerData();
+    const totalCheios = estoque.reduce((acc, row) => acc + (Number(row.cheios) || 0), 0);
+    const totalVazios = estoque.reduce((acc, row) => acc + (Number(row.vazios) || 0), 0);
+    document.getElementById("kpi-cheios").textContent = totalCheios;
+    document.getElementById("kpi-vazios").textContent = totalVazios;
+  } catch {
+    document.getElementById("kpi-cheios").textContent = "—";
+    document.getElementById("kpi-vazios").textContent = "—";
+  }
+
+  try {
+    const res = await fetch(`${CONFIG.APPS_SCRIPT_URL}?action=getLog`);
+    logs = await res.json();
+    document.getElementById("admin-sync-status").textContent =
+      `Sincronizado · ${logs.length} registro${logs.length !== 1 ? "s" : ""} carregado${logs.length !== 1 ? "s" : ""}`;
+  } catch {
+    logs = [];
+    document.getElementById("admin-sync-status").textContent = "Não foi possível carregar o histórico do Apps Script.";
+  }
+
+  renderTabela();
+  setTimeout(() => icon.classList.remove("spinning"), 500);
+}
+
+if (session) {
+  carregarPainel();
+}
+</script>
+</body>
+</html>
