@@ -2,7 +2,12 @@
 const CONFIG = {
   SHEET_ID:        "1hxcjBX7q41HRK3-SqdXT7-nS6r5kWVuK3vi3jcF88Ao",
   SHEET_TAB:       "webinventario",
-  APPS_SCRIPT_URL: "https://script.google.com/a/macros/shopee.com/s/AKfycbz1vBA9Ex0uEUZSIHugGK-__ao2L5C00RUOQhpBzVdUmj7uBL4k8rcEUqVhouJJM23C/execle.com/a/macros/shopee.com/s/AKfycbz8hLmctZmZYNwIVG3D4XFBVuDoMRwxk7SzMcxo8DFRtW9Le9TdaAeaYA45KWTTx82c/exec"
+  APPS_SCRIPT_URL: "https://script.google.com/a/macros/shopee.com/s/AKfycbz1vBA9Ex0uEUZSIHugGK-__ao2L5C00RUOQhpBzVdUmj7uBL4k8rcEUqVhouJJM23C/execle.com/a/macros/shopee.com/s/AKfycbz8hLmctZmZYNwIVG3D4XFBVuDoMRwxk7SzMcxo8DFRtW9Le9TdaAeaYA45KWTTx82c/exec",
+  GOOGLE_CLIENT_ID: "1028346342471-oq4rafb2rr864rl3dck10pc3te3ilvsb.apps.googleusercontent.com",
+  ADMIN_WHITELIST: [
+    "jefferson.msantos@shopee.com", "tacio.correia@shopee.com"
+  ]
+
 };
 
 const TONERS = [
