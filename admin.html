@@ -324,6 +324,27 @@
     background: var(--shopee-light);
   }
   .btn-qty:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-danger-outline {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 6px;
+    border: 1px solid #E5B8B3;
+    background: transparent;
+    color: #9E2A1C;
+    font-family: var(--sans);
+    font-size: 12.5px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+  }
+  .btn-danger-outline:hover:not(:disabled) {
+    border-color: #C0392B;
+    background: #C0392B;
+    color: #FFFFFF;
+  }
+  .btn-danger-outline:disabled { opacity: 0.55; cursor: not-allowed; }
 
   @media (max-width: 900px) {
     .kpi-grid, .vazios-ti-grid { grid-template-columns: repeat(2, 1fr); }
@@ -452,13 +473,18 @@
           <div class="panel-title">Fila de validação de movimentações</div>
           <div class="panel-sub" id="admin-sync-status">Carregando registros...</div>
         </div>
-        <button class="btn-refresh" onclick="carregarPainel()">
+        <div class="admin-actions">
+          <button type="button" class="btn-danger-outline" id="btn-zerar-estoque" onclick="zerarEstoque(this)">
+            Zerar estoque
+          </button>
+          <button class="btn-refresh" onclick="carregarPainel()">
           <svg id="refresh-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M23 4v6h-6"/><path d="M1 20v-6h6"/>
             <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
           </svg>
           Atualizar
         </button>
+        </div>
       </div>
 
       <div class="filter-bar">
@@ -758,6 +784,35 @@ async function atualizarKpisEstoque() {
   } catch {
     document.getElementById("kpi-cheios").textContent = "—";
     document.getElementById("kpi-vazios").textContent = "—";
+  }
+}
+
+async function zerarEstoque(btn) {
+  if (!confirm("Zerar TODO o estoque do Armário TI (cheios e vazios de todas as cores irão para 0)?")) return;
+  const activeSession = AUTH.getSession();
+  if (!activeSession) {
+    AUTH.requireAdmin();
+    return;
+  }
+
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "Zerando...";
+  }
+
+  try {
+    await apiPost({ action: "zerarEstoque", token: activeSession.idToken });
+    sessionStorage.removeItem("tonerData");
+    await atualizarKpisEstoque();
+    await loadTonerPill();
+  } catch (err) {
+    if (handleAuthError(err)) return;
+    alert(`Não foi possível zerar o estoque: ${err.message || err}`);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = "Zerar estoque";
+    }
   }
 }
 
