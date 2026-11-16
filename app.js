@@ -2,7 +2,7 @@
 const CONFIG = {
   SHEET_ID:        "1DSldSoBwPkKs52M2F61fu4E6rGGFSLzjSth0L0e-L6U",
   SHEET_TAB:       "webinventario",
-  APPS_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbxuRUWaTU8UeWQzgfvjuSPvogAC4-OXzTjcL_QzWPlChE6r8mH1bCMkQOK2cAUonzFo/exec",
+  APPS_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbwt59m4Z8AdooCvRbWEQn8LINQ0y5-eqJQ_aVFu8tMN5UjzVE5hB7CRH0txeYiFcSxq/exec",
   GOOGLE_CLIENT_ID: "1028346342471-oq4rafb2rr864rl3dck10pc3te3ilvsb.apps.googleusercontent.com",
   ADMIN_TIMEOUT_MINUTES: 5,
   ADMIN_WHITELIST: [
