@@ -1,8 +1,8 @@
 /* ── CONFIG ── */
 const CONFIG = {
-  SHEET_ID:        "1hxcjBX7q41HRK3-SqdXT7-nS6r5kWVuK3vi3jcF88Ao",
+  SHEET_ID:        "1DSldSoBwPkKs52M2F61fu4E6rGGFSLzjSth0L0e-L6U",
   SHEET_TAB:       "webinventario",
-  APPS_SCRIPT_URL: "https://script.google.com/a/macros/shopee.com/s/AKfycbz1vBA9Ex0uEUZSIHugGK-__ao2L5C00RUOQhpBzVdUmj7uBL4k8rcEUqVhouJJM23C/exec",
+  APPS_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbxuRUWaTU8UeWQzgfvjuSPvogAC4-OXzTjcL_QzWPlChE6r8mH1bCMkQOK2cAUonzFo/exec",
   GOOGLE_CLIENT_ID: "1028346342471-oq4rafb2rr864rl3dck10pc3te3ilvsb.apps.googleusercontent.com",
   ADMIN_WHITELIST: [
     "jefferson.msantos@shopee.com", "tacio.correia@shopee.com"
