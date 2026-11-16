@@ -95,9 +95,26 @@
   }
   .btn-logout svg { width: 14px; height: 14px; }
 
+  .admin-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .session-timer {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--ink-mid);
+  }
+  .session-timer.warn {
+    border-color: #E67E22;
+    color: var(--warning);
+    background: var(--warning-bg);
+  }
+
   .kpi-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 14px;
     margin-bottom: 28px;
   }
@@ -207,7 +224,7 @@
   .status-validado { background: var(--success-bg); color: var(--success); }
   .status-divergente { background: #FDECEA; color: #9E2A1C; }
 
-  .action-group { display: flex; gap: 6px; }
+  .action-group { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
   .btn-val {
     padding: 5px 10px;
     border-radius: 5px;
@@ -222,9 +239,98 @@
   }
   .btn-val.approve:hover { border-color: var(--success); color: var(--success); background: var(--success-bg); }
   .btn-val.reject:hover  { border-color: #C0392B; color: #C0392B; background: rgba(192,57,43,0.08); }
+  .btn-val:disabled { opacity: 0.55; cursor: not-allowed; }
+  .btn-val.approve.active {
+    border-color: var(--success);
+    background: var(--success);
+    color: #FFFFFF;
+    box-shadow: 0 0 0 2px rgba(26, 127, 75, 0.18);
+  }
+  .btn-val.reject.active {
+    border-color: #C0392B;
+    background: #C0392B;
+    color: #FFFFFF;
+    box-shadow: 0 0 0 2px rgba(192, 57, 43, 0.18);
+  }
+  .btn-val.delete {
+    border-color: #E5B8B3;
+    color: #9E2A1C;
+    background: var(--white);
+  }
+  .btn-val.delete:hover {
+    border-color: #9E2A1C;
+    background: #9E2A1C;
+    color: #FFFFFF;
+  }
+
+  .vazios-ti-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    padding: 16px 20px;
+  }
+  .vazio-ti-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .vazio-ti-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .vazio-ti-ref {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-soft);
+  }
+  .vazio-ti-ctrl {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .vazio-ti-val {
+    font-family: var(--mono);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--ink);
+    min-width: 28px;
+    text-align: center;
+  }
+  .btn-qty {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--white);
+    color: var(--ink);
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+  }
+  .btn-qty:hover:not(:disabled) {
+    border-color: var(--shopee);
+    color: var(--shopee);
+    background: var(--shopee-light);
+  }
+  .btn-qty:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  @media (max-width: 900px) {
+    .kpi-grid, .vazios-ti-grid { grid-template-columns: repeat(2, 1fr); }
+  }
 
   @media (max-width: 700px) {
-    .kpi-grid { grid-template-columns: 1fr; }
+    .kpi-grid, .vazios-ti-grid { grid-template-columns: 1fr; }
     .admin-user-bar { flex-direction: column; align-items: flex-start; }
     .val-table { display: block; overflow-x: auto; }
   }
@@ -288,7 +394,9 @@
         <div class="admin-email" id="admin-email">—</div>
       </div>
     </div>
-    <button type="button" class="btn-logout" onclick="AUTH.logout()">
+    <div class="admin-actions">
+      <span class="session-timer" id="session-timer" title="Logout automático após 5 min sem atividade">Sessão · 05:00</span>
+      <button type="button" class="btn-logout" onclick="AUTH.logout()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
         <polyline points="16 17 21 12 16 7"/>
@@ -296,23 +404,44 @@
       </svg>
       Sair
     </button>
+    </div>
   </div>
 
   <div class="kpi-grid">
     <div class="kpi-card">
-      <div class="kpi-label">Toners Cheios</div>
+      <div class="kpi-label">Cheios · Armário TI</div>
       <div class="kpi-value" id="kpi-cheios">—</div>
       <div class="kpi-sub">Disponíveis no armário TI</div>
     </div>
     <div class="kpi-card">
-      <div class="kpi-label">Toners Vazios</div>
+      <div class="kpi-label">Vazios · Armário TI</div>
       <div class="kpi-value" id="kpi-vazios">—</div>
-      <div class="kpi-sub">Aguardando descarte / coleta</div>
+      <div class="kpi-sub">No armário inferior da impressora</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Vazios · Sala de TI</div>
+      <div class="kpi-value" id="kpi-vazios-ti">0</div>
+      <div class="kpi-sub">Armazenados na sala de TI</div>
     </div>
     <div class="kpi-card">
       <div class="kpi-label">Pendentes de Validação</div>
       <div class="kpi-value" id="kpi-pendentes">—</div>
       <div class="kpi-sub">Movimentações recentes</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="toner-panel">
+      <div class="panel-head">
+        <div>
+          <div class="panel-title">Toners vazios — Sala de TI</div>
+          <div class="panel-sub" id="vazios-ti-status">Carregando...</div>
+        </div>
+        <button type="button" class="btn-refresh" onclick="zerarVaziosTI()">
+          Zerar sala de TI
+        </button>
+      </div>
+      <div class="vazios-ti-grid" id="vazios-ti-grid"></div>
     </div>
   </div>
 
@@ -408,7 +537,16 @@ function getValidacoes() {
 }
 
 function getRowId(r, idx) {
-  return `${r.data || idx}_${r.modelo || ""}_${r.resp || ""}`;
+  return r.id || `${r.data || idx}_${r.modelo || ""}_${r.resp || ""}`;
+}
+
+function escapeHtml(str) {
+  return String(str ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 function setFilter(btn) {
@@ -418,29 +556,95 @@ function setFilter(btn) {
   renderTabela();
 }
 
+function findLogIndex(rowId) {
+  return logs.findIndex((r, idx) => getRowId(r, idx) === rowId);
+}
+
 async function validarMovimentacao(rowId, status) {
   const validacoes = getValidacoes();
+  const validadoEm = new Date().toISOString();
   validacoes[rowId] = {
     status,
     validadoPor: session?.email || "admin",
-    validadoEm: new Date().toISOString()
+    validadoEm
   };
   localStorage.setItem(VALIDACOES_KEY, JSON.stringify(validacoes));
+
+  const idx = findLogIndex(rowId);
+  const item = idx >= 0 ? logs[idx] : null;
+  if (item) item.validacao = status;
   renderTabela();
 
   try {
-    await fetch(CONFIG.APPS_SCRIPT_URL, {
+    const res = await fetch(CONFIG.APPS_SCRIPT_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify({
         action: "validar",
         id: rowId,
         status,
+        modelo: item?.modelo || "",
+        tipo: item?.tipo || "",
+        qtd: Number(item?.qtd) || 1,
         validadoPor: session?.email,
-        validadoEm: validacoes[rowId].validadoEm
+        validadoEm
       })
     });
-  } catch { /* fallback local já salvo */ }
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json().catch(() => ({}));
+    if (data.erro || data.error) throw new Error(data.erro || data.error);
+
+    delete validacoes[rowId];
+    localStorage.setItem(VALIDACOES_KEY, JSON.stringify(validacoes));
+    await Promise.all([atualizarKpisEstoque(), carregarVaziosTI()]);
+  } catch (err) {
+    console.warn("Erro ao sincronizar validação:", err);
+  }
+}
+
+async function removerMovimentacao(rowId, btn) {
+  if (!confirm("Remover esta movimentação divergente da fila e do estoque?")) return;
+
+  const idx = findLogIndex(rowId);
+  const item = idx >= 0 ? logs[idx] : null;
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "Removendo...";
+  }
+
+  try {
+    const res = await fetch(CONFIG.APPS_SCRIPT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({
+        action: "remover",
+        id: rowId,
+        modelo: item?.modelo || "",
+        tipo: item?.tipo || "",
+        qtd: Number(item?.qtd) || 1,
+        removidoPor: session?.email,
+        removidoEm: new Date().toISOString()
+      })
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json().catch(() => ({}));
+    if (data.erro || data.error || data.ok === false) {
+      throw new Error(data.erro || data.error || "O Apps Script ainda não suporta remoção.");
+    }
+
+    const validacoes = getValidacoes();
+    delete validacoes[rowId];
+    localStorage.setItem(VALIDACOES_KEY, JSON.stringify(validacoes));
+    if (idx >= 0) logs.splice(idx, 1);
+    sessionStorage.removeItem("tonerData");
+    await carregarPainel();
+  } catch (err) {
+    alert(`Não foi possível remover a movimentação: ${err.message || err}`);
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = "Remover";
+    }
+  }
 }
 
 function renderTabela() {
@@ -452,7 +656,8 @@ function renderTabela() {
   const enriched = logs.map((r, idx) => {
     const id = getRowId(r, idx);
     const val = validacoes[id];
-    const status = val?.status || r.validacao || "pendente";
+    const serverStatus = r.validacao && r.validacao !== "pendente" ? r.validacao : "";
+    const status = serverStatus || val?.status || r.validacao || "pendente";
     if (status === "pendente") pendentesCount++;
     return { ...r, _id: id, _status: status, _val: val };
   });
@@ -484,32 +689,47 @@ function renderTabela() {
       validado:   `<span class="status-pill status-validado">Validado</span>`,
       divergente: `<span class="status-pill status-divergente">Divergente</span>`
     };
+    const safeId = escapeHtml(r._id);
+    const isValidado = r._status === "validado";
+    const isDivergente = r._status === "divergente";
+    const removeBtn = isDivergente
+      ? `<button type="button" class="btn-val delete" data-action="remover" data-id="${safeId}" title="Remover movimentação da fila e do estoque">Remover</button>`
+      : "";
     return `<tr>
       <td style="font-family:var(--mono);font-size:12px;">${dataStr}</td>
       <td>
         <div class="cor-cell">
           <span class="cor-dot" style="background:${info.cor}"></span>
-          <span>${info.nome}</span>
+          <span>${escapeHtml(info.nome)}</span>
         </div>
       </td>
-      <td>${TIPO_LABEL[r.tipo] || r.tipo || "—"}</td>
-      <td style="font-family:var(--mono);">${r.qtd || 1}</td>
-      <td>${r.resp || "—"}</td>
+      <td>${escapeHtml(TIPO_LABEL[r.tipo] || r.tipo || "—")}</td>
+      <td style="font-family:var(--mono);">${Number(r.qtd) || 1}</td>
+      <td>${escapeHtml(r.resp || "—")}</td>
       <td>${statusMap[r._status] || statusMap.pendente}</td>
       <td>
         <div class="action-group">
-          <button type="button" class="btn-val approve" onclick="validarMovimentacao('${r._id}', 'validado')">Validar</button>
-          <button type="button" class="btn-val reject" onclick="validarMovimentacao('${r._id}', 'divergente')">Divergente</button>
+          <button type="button" class="btn-val approve${isValidado ? " active" : ""}" data-action="validado" data-id="${safeId}" aria-pressed="${isValidado}">Validar</button>
+          <button type="button" class="btn-val reject${isDivergente ? " active" : ""}" data-action="divergente" data-id="${safeId}" aria-pressed="${isDivergente}">Divergente</button>
+          ${removeBtn}
         </div>
       </td>
     </tr>`;
   }).join("");
 }
 
-async function carregarPainel() {
-  const icon = document.getElementById("refresh-icon");
-  icon.classList.add("spinning");
+document.getElementById("val-tbody").addEventListener("click", e => {
+  const btn = e.target.closest("button[data-action][data-id]");
+  if (!btn) return;
+  const { action, id } = btn.dataset;
+  if (action === "remover") {
+    removerMovimentacao(id, btn);
+  } else if (action === "validado" || action === "divergente") {
+    validarMovimentacao(id, action);
+  }
+});
 
+async function atualizarKpisEstoque() {
   try {
     sessionStorage.removeItem("tonerData");
     const estoque = await fetchTonerData();
@@ -521,6 +741,127 @@ async function carregarPainel() {
     document.getElementById("kpi-cheios").textContent = "—";
     document.getElementById("kpi-vazios").textContent = "—";
   }
+}
+
+const VAZIOS_TI_KEY = "tiVaziosSalaTI";
+let vaziosTI = { W2150XC: 0, W2151XC: 0, W2152XC: 0, W2153XC: 0 };
+let vaziosTISaveTimer = null;
+
+function getVaziosTILocal() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(VAZIOS_TI_KEY) || "{}");
+    const result = {};
+    Object.keys(CORES_MAP).forEach(ref => {
+      result[ref] = Math.max(0, Math.floor(Number(raw[ref]) || 0));
+    });
+    return result;
+  } catch {
+    return { W2150XC: 0, W2151XC: 0, W2152XC: 0, W2153XC: 0 };
+  }
+}
+
+function renderVaziosTI() {
+  const grid = document.getElementById("vazios-ti-grid");
+  const total = Object.values(vaziosTI).reduce((acc, n) => acc + (Number(n) || 0), 0);
+  document.getElementById("kpi-vazios-ti").textContent = total;
+
+  grid.innerHTML = Object.entries(CORES_MAP).map(([ref, info]) => {
+    const qtd = Math.max(0, Number(vaziosTI[ref]) || 0);
+    return `<div class="vazio-ti-card">
+      <div class="vazio-ti-head">
+        <div class="cor-cell">
+          <span class="cor-dot" style="background:${info.cor}"></span>
+          <span style="font-weight:600;color:var(--ink);font-size:13.5px;">${escapeHtml(info.nome)}</span>
+        </div>
+        <span class="vazio-ti-ref">${escapeHtml(ref)}</span>
+      </div>
+      <div class="vazio-ti-ctrl">
+        <button type="button" class="btn-qty" data-vazio-ref="${escapeHtml(ref)}" data-delta="-1" ${qtd === 0 ? "disabled" : ""} aria-label="Diminuir ${escapeHtml(info.nome)}">−</button>
+        <span class="vazio-ti-val">${qtd}</span>
+        <button type="button" class="btn-qty" data-vazio-ref="${escapeHtml(ref)}" data-delta="1" aria-label="Aumentar ${escapeHtml(info.nome)}">+</button>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+async function carregarVaziosTI() {
+  const statusEl = document.getElementById("vazios-ti-status");
+  try {
+    const res = await fetch(`${CONFIG.APPS_SCRIPT_URL}?action=getVaziosTI`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (!Array.isArray(data)) throw new Error(data?.erro || "Resposta inválida");
+
+    const next = { W2150XC: 0, W2151XC: 0, W2152XC: 0, W2153XC: 0 };
+    data.forEach(item => {
+      if (item && item.ref in next) {
+        next[item.ref] = Math.max(0, Math.floor(Number(item.qtd) || 0));
+      }
+    });
+    vaziosTI = next;
+    localStorage.setItem(VAZIOS_TI_KEY, JSON.stringify(vaziosTI));
+    statusEl.textContent = "Controle separado do armário · Sincronizado com o Google Sheets";
+  } catch {
+    vaziosTI = getVaziosTILocal();
+    statusEl.textContent = "Salvo localmente (atualize o Apps Script para sincronizar na planilha)";
+  }
+  renderVaziosTI();
+}
+
+async function salvarVaziosTI() {
+  const statusEl = document.getElementById("vazios-ti-status");
+  statusEl.textContent = "Salvando...";
+  try {
+    const res = await fetch(CONFIG.APPS_SCRIPT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({
+        action: "setVaziosTI",
+        itens: vaziosTI,
+        atualizadoPor: session?.email || "admin",
+        atualizadoEm: new Date().toISOString()
+      })
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json().catch(() => ({}));
+    if (data.erro || data.error || data.ok === false) {
+      throw new Error(data.erro || data.error || "Apps Script não atualizado");
+    }
+    statusEl.textContent = "Sincronizado com o Google Sheets";
+  } catch {
+    statusEl.textContent = "Salvo localmente (atualize o Apps Script para sincronizar na planilha)";
+  }
+}
+
+function alterarVazioTI(ref, delta) {
+  if (!(ref in vaziosTI)) return;
+  vaziosTI[ref] = Math.max(0, (Number(vaziosTI[ref]) || 0) + delta);
+  localStorage.setItem(VAZIOS_TI_KEY, JSON.stringify(vaziosTI));
+  renderVaziosTI();
+  clearTimeout(vaziosTISaveTimer);
+  vaziosTISaveTimer = setTimeout(salvarVaziosTI, 400);
+}
+
+async function zerarVaziosTI() {
+  if (!confirm("Zerar a quantidade de toners vazios na Sala de TI (coleta/descarte realizado)?")) return;
+  Object.keys(vaziosTI).forEach(ref => { vaziosTI[ref] = 0; });
+  localStorage.setItem(VAZIOS_TI_KEY, JSON.stringify(vaziosTI));
+  renderVaziosTI();
+  clearTimeout(vaziosTISaveTimer);
+  await salvarVaziosTI();
+}
+
+document.getElementById("vazios-ti-grid").addEventListener("click", e => {
+  const btn = e.target.closest("button[data-vazio-ref][data-delta]");
+  if (!btn) return;
+  alterarVazioTI(btn.dataset.vazioRef, Number(btn.dataset.delta) || 0);
+});
+
+async function carregarPainel() {
+  const icon = document.getElementById("refresh-icon");
+  icon.classList.add("spinning");
+
+  await Promise.all([atualizarKpisEstoque(), carregarVaziosTI()]);
 
   try {
     const res = await fetch(`${CONFIG.APPS_SCRIPT_URL}?action=getLog`);
@@ -538,6 +879,17 @@ async function carregarPainel() {
 
 if (session) {
   carregarPainel();
+  const timerEl = document.getElementById("session-timer");
+  AUTH.startIdleMonitor({
+    onTick(remainingMs) {
+      if (!timerEl) return;
+      const totalSec = Math.ceil(remainingMs / 1000);
+      const min = String(Math.floor(totalSec / 60)).padStart(2, "0");
+      const sec = String(totalSec % 60).padStart(2, "0");
+      timerEl.textContent = `Sessão · ${min}:${sec}`;
+      timerEl.classList.toggle("warn", remainingMs <= 60000);
+    }
+  });
 }
 </script>
 </body>

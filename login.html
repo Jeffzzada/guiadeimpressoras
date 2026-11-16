@@ -311,9 +311,13 @@
   }
 
   const params = new URLSearchParams(window.location.search);
-  if (params.get("reason") === "auth") {
+  const reason = params.get("reason");
+  if (reason === "auth") {
     showAlert("info", "Faça login com uma conta Google autorizada para acessar o painel admin.");
+  } else if (reason === "timeout") {
+    showAlert("warn", "Sua sessão expirou após 5 minutos de inatividade. Faça login novamente para continuar.");
   }
+
 
   function onCredential(response) {
     const result = AUTH.handleGoogleCredential(response);
@@ -331,7 +335,7 @@
     if (!AUTH.isClientConfigured()) {
       btnWrap.style.display = "none";
       demoBtn.classList.add("show");
-      if (params.get("reason") !== "auth") {
+      if (reason !== "auth" && reason !== "timeout") {
         showAlert(
           "warn",
           "<strong>Google Client ID não configurado.</strong> Defina <code>CONFIG.GOOGLE_CLIENT_ID</code> e <code>CONFIG.ADMIN_WHITELIST</code> em <code>app.js</code> para ativar o OAuth real."

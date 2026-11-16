@@ -379,11 +379,15 @@ async function submeterMovimentacao() {
 
   try {
     const payload = { action: "registrar", modelo, tipo, qtd, resp, obs, turno, data: new Date().toISOString() };
-    await fetch(CONFIG.APPS_SCRIPT_URL, {
+    const res = await fetch(CONFIG.APPS_SCRIPT_URL, {
       method: "POST",
       body: JSON.stringify(payload),
       headers: { "Content-Type": "text/plain;charset=utf-8" }
     });
+
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const result = await res.json().catch(() => ({}));
+    if (result.erro || result.error) throw new Error(result.erro || result.error);
 
     sessionStorage.removeItem("tonerData");
     await loadEstoque(true);

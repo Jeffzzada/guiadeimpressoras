@@ -4,6 +4,7 @@ const CONFIG = {
   SHEET_TAB:       "webinventario",
   APPS_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbxuRUWaTU8UeWQzgfvjuSPvogAC4-OXzTjcL_QzWPlChE6r8mH1bCMkQOK2cAUonzFo/exec",
   GOOGLE_CLIENT_ID: "1028346342471-oq4rafb2rr864rl3dck10pc3te3ilvsb.apps.googleusercontent.com",
+  ADMIN_TIMEOUT_MINUTES: 5,
   ADMIN_WHITELIST: [
     "jefferson.msantos@shopee.com", "tacio.correia@shopee.com"
   ]
