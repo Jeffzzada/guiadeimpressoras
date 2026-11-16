@@ -156,7 +156,7 @@
 
 <script src="app.js"></script>
 <script>
-const CORES = { W2150XC: "Preto", W2151XC: "Ciano", W2152XC: "Amarelo", W2153XC: "Magenta" };
+
 
 async function loadMini() {
   try {
@@ -170,10 +170,10 @@ async function loadMini() {
         : cheios <= 1
         ? `<span style="color:#E67E22;font-weight:600;font-size:12px;">⚡ Baixo</span>`
         : `<span style="color:var(--success);font-weight:600;font-size:12px;">✓ Normal</span>`;
-      const cor = CORES[row.ref] || row.ref;
+      const cor = (CORES_MAP[row.ref] && CORES_MAP[row.ref].nome) || row.ref;
       return `<tr>
-        <td style="font-weight:500;color:var(--ink)">${cor}</td>
-        <td style="font-family:var(--mono);font-size:12px;">${row.ref}</td>
+        <td style="font-weight:500;color:var(--ink)">${escapeHtml(cor)}</td>
+        <td style="font-family:var(--mono);font-size:12px;">${escapeHtml(row.ref)}</td>
         <td><span class="badge-full">${cheios}</span></td>
         <td><span class="badge-empty">${vazios}</span></td>
         <td>${status}</td>

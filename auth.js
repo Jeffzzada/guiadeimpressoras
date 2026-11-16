@@ -22,8 +22,10 @@ const AUTH = {
 
   decodeJwt(token) {
     try {
-      const base64Url = token.split(".")[1];
-      const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+      if (typeof token !== "string") return null;
+      const parts = token.split(".");
+      if (parts.length !== 3 || !parts[1]) return null;
+      const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
       const jsonPayload = decodeURIComponent(
         atob(base64)
           .split("")
@@ -40,8 +42,17 @@ const AUTH = {
     if (!email || typeof CONFIG === "undefined" || !Array.isArray(CONFIG.ADMIN_WHITELIST)) {
       return false;
     }
-    const normalized = email.trim().toLowerCase();
+    const normalized = String(email).trim().toLowerCase();
     return CONFIG.ADMIN_WHITELIST.some(allowed => allowed.trim().toLowerCase() === normalized);
+  },
+
+  isValidTokenPayload(payload) {
+    if (!payload || typeof payload !== "object" || !payload.email) return false;
+    if (!payload.email_verified) return false;
+    if (this.isClientConfigured() && payload.aud !== CONFIG.GOOGLE_CLIENT_ID) return false;
+    if (!payload.exp || Date.now() >= Number(payload.exp) * 1000) return false;
+    if (!this.isAuthorizedEmail(payload.email)) return false;
+    return true;
   },
 
   getSession() {
@@ -52,42 +63,59 @@ const AUTH = {
         return null;
       }
       const session = JSON.parse(raw);
-      if (!session || !session.email || !session.exp) {
+      if (!session || !session.email || !session.exp || !session.idToken) {
         this._lastExpireReason = "auth";
+        sessionStorage.removeItem(AUTH_SESSION_KEY);
         return null;
       }
+
+      const tokenPayload = this.decodeJwt(session.idToken);
+      if (
+        !tokenPayload ||
+        String(tokenPayload.email).trim().toLowerCase() !== String(session.email).trim().toLowerCase()
+      ) {
+        this._lastExpireReason = "auth";
+        sessionStorage.removeItem(AUTH_SESSION_KEY);
+        return null;
+      }
+
       const now = Date.now();
-      if (now >= session.exp * 1000) {
+      const tokenExpMs = Math.min(Number(session.exp), Number(tokenPayload.exp || 0)) * 1000;
+      if (!tokenExpMs || now >= tokenExpMs) {
         this._lastExpireReason = "timeout";
         sessionStorage.removeItem(AUTH_SESSION_KEY);
         return null;
       }
+
       if (session.lastActivity && now - session.lastActivity >= this.getTimeoutMs()) {
         this._lastExpireReason = "timeout";
         sessionStorage.removeItem(AUTH_SESSION_KEY);
         return null;
       }
-      if (!session.isDemo && !this.isAuthorizedEmail(session.email)) {
+
+      if (!this.isValidTokenPayload(tokenPayload)) {
         this._lastExpireReason = "auth";
         sessionStorage.removeItem(AUTH_SESSION_KEY);
         return null;
       }
+
       return session;
     } catch {
       this._lastExpireReason = "auth";
+      sessionStorage.removeItem(AUTH_SESSION_KEY);
       return null;
     }
   },
 
-  saveSession(payload, idToken = "", isDemo = false) {
+  saveSession(payload, idToken) {
+    if (!idToken || !this.isValidTokenPayload(payload)) return null;
     const now = Date.now();
     const session = {
       email: payload.email,
       name: payload.name || payload.email.split("@")[0],
-      picture: payload.picture || "",
-      exp: payload.exp || Math.floor(now / 1000) + 3600,
+      picture: typeof payload.picture === "string" && payload.picture.startsWith("https://") ? payload.picture : "",
+      exp: Number(payload.exp),
       idToken,
-      isDemo,
       loginAt: new Date(now).toISOString(),
       lastActivity: now
     };
@@ -108,17 +136,24 @@ const AUTH = {
     if (!active) return 0;
     const now = Date.now();
     const idleDeadline = (active.lastActivity || now) + this.getTimeoutMs();
-    const jwtDeadline = active.exp * 1000;
+    const jwtDeadline = Number(active.exp) * 1000;
     return Math.max(0, Math.min(idleDeadline, jwtDeadline) - now);
   },
 
   handleGoogleCredential(response) {
-    const payload = this.decodeJwt(response?.credential || "");
+    const token = response?.credential || "";
+    const payload = this.decodeJwt(token);
     if (!payload || !payload.email) {
       return { ok: false, reason: "invalid_token", message: "Não foi possível validar o token retornado pelo Google." };
     }
+    if (this.isClientConfigured() && payload.aud !== CONFIG.GOOGLE_CLIENT_ID) {
+      return { ok: false, reason: "invalid_aud", message: "Token emitido para outro aplicativo." };
+    }
     if (!payload.email_verified) {
       return { ok: false, reason: "unverified", message: "Sua conta Google precisa estar com o e-mail verificado." };
+    }
+    if (!payload.exp || Date.now() >= Number(payload.exp) * 1000) {
+      return { ok: false, reason: "expired", message: "O token retornado já está expirado. Tente entrar novamente." };
     }
     if (!this.isAuthorizedEmail(payload.email)) {
       return {
@@ -129,23 +164,8 @@ const AUTH = {
       };
     }
 
-    const session = this.saveSession(payload, response.credential, false);
-    return { ok: true, session };
-  },
-
-  loginDemo() {
-    if (this.isClientConfigured()) return null;
-    const demoEmail = CONFIG.ADMIN_WHITELIST?.[0] || "admin.ti@shopee.com";
-    return this.saveSession(
-      {
-        email: demoEmail,
-        name: "Admin TI (Modo Preview)",
-        picture: "",
-        exp: Math.floor(Date.now() / 1000) + 3600
-      },
-      "",
-      true
-    );
+    const session = this.saveSession(payload, token);
+    return session ? { ok: true, session } : { ok: false, reason: "invalid_session", message: "Falha ao iniciar sessão." };
   },
 
   logout(reason = "") {

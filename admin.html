@@ -496,36 +496,45 @@
 <script>
 const session = AUTH.requireAdmin();
 const VALIDACOES_KEY = "tiValidacoesEstoque";
-
-const CORES_MAP = {
-  W2150XC: { nome: "Preto",   cor: "#2D2D2D" },
-  W2151XC: { nome: "Ciano",   cor: "#0070C0" },
-  W2152XC: { nome: "Amarelo", cor: "#CCA800" },
-  W2153XC: { nome: "Magenta", cor: "#C0004A" }
-};
-
-const TIPO_LABEL = {
-  entrada_cheio: "Entrada — cheio",
-  saida_cheio:   "Saída — instalado",
-  entrada_vazio: "Entrada — vazio",
-  saida_vazio:   "Saída — descarte"
-};
+const VAZIOS_TI_KEY = "tiVaziosSalaTI";
 
 let logs = [];
 let filtroAtual = "todos";
+let limiteTabela = 50;
+const validandoIds = new Set();
+
+let vaziosTI = { W2150XC: 0, W2151XC: 0, W2152XC: 0, W2153XC: 0 };
+let vaziosTISaveTimer = null;
+let vaziosTIDirty = false;
 
 if (session) {
   document.getElementById("admin-name").textContent = session.name;
   document.getElementById("admin-email").textContent = session.email;
-  if (session.isDemo) {
-    document.getElementById("demo-chip").style.display = "inline-block";
-  }
   const avatarEl = document.getElementById("admin-avatar");
   if (session.picture) {
-    avatarEl.innerHTML = `<img src="${session.picture}" alt="${session.name}">`;
+    avatarEl.textContent = "";
+    const img = document.createElement("img");
+    img.src = session.picture;
+    img.alt = session.name;
+    avatarEl.appendChild(img);
   } else {
     avatarEl.textContent = session.name.slice(0, 2).toUpperCase();
   }
+}
+
+window.addEventListener("pageshow", () => {
+  if (!AUTH.getSession()) {
+    AUTH.requireAdmin();
+  }
+});
+
+function handleAuthError(err) {
+  const msg = String(err?.message || "");
+  if (/sessão|autenticado|token|acesso negado/i.test(msg)) {
+    AUTH.logout("timeout");
+    return true;
+  }
+  return false;
 }
 
 function getValidacoes() {
@@ -540,19 +549,11 @@ function getRowId(r, idx) {
   return r.id || `${r.data || idx}_${r.modelo || ""}_${r.resp || ""}`;
 }
 
-function escapeHtml(str) {
-  return String(str ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
 function setFilter(btn) {
   document.querySelectorAll(".filter-tab").forEach(b => b.classList.remove("active"));
   btn.classList.add("active");
   filtroAtual = btn.dataset.filter;
+  limiteTabela = 50;
   renderTabela();
 }
 
@@ -561,76 +562,80 @@ function findLogIndex(rowId) {
 }
 
 async function validarMovimentacao(rowId, status) {
+  if (validandoIds.has(rowId)) return;
+  const activeSession = AUTH.getSession();
+  if (!activeSession) {
+    AUTH.requireAdmin();
+    return;
+  }
+
+  validandoIds.add(rowId);
   const validacoes = getValidacoes();
+  const prevLocal = validacoes[rowId];
+  const idx = findLogIndex(rowId);
+  const item = idx >= 0 ? logs[idx] : null;
+  const prevValidacao = item ? item.validacao : undefined;
   const validadoEm = new Date().toISOString();
+
   validacoes[rowId] = {
     status,
-    validadoPor: session?.email || "admin",
+    validadoPor: activeSession.email,
     validadoEm
   };
   localStorage.setItem(VALIDACOES_KEY, JSON.stringify(validacoes));
-
-  const idx = findLogIndex(rowId);
-  const item = idx >= 0 ? logs[idx] : null;
   if (item) item.validacao = status;
   renderTabela();
 
   try {
-    const res = await fetch(CONFIG.APPS_SCRIPT_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({
-        action: "validar",
-        id: rowId,
-        status,
-        modelo: item?.modelo || "",
-        tipo: item?.tipo || "",
-        qtd: Number(item?.qtd) || 1,
-        validadoPor: session?.email,
-        validadoEm
-      })
+    await apiPost({
+      action: "validar",
+      token: activeSession.idToken,
+      id: rowId,
+      status,
+      modelo: item?.modelo || "",
+      tipo: item?.tipo || "",
+      qtd: Number(item?.qtd) || 1,
+      validadoEm
     });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json().catch(() => ({}));
-    if (data.erro || data.error) throw new Error(data.erro || data.error);
 
-    delete validacoes[rowId];
-    localStorage.setItem(VALIDACOES_KEY, JSON.stringify(validacoes));
-    await Promise.all([atualizarKpisEstoque(), carregarVaziosTI()]);
+    const latest = getValidacoes();
+    delete latest[rowId];
+    localStorage.setItem(VALIDACOES_KEY, JSON.stringify(latest));
+    await atualizarKpisEstoque();
   } catch (err) {
-    console.warn("Erro ao sincronizar validação:", err);
+    if (handleAuthError(err)) return;
+    const latest = getValidacoes();
+    if (prevLocal) latest[rowId] = prevLocal;
+    else delete latest[rowId];
+    localStorage.setItem(VALIDACOES_KEY, JSON.stringify(latest));
+    if (item) item.validacao = prevValidacao;
+    alert(`Não foi possível salvar a validação: ${err.message || err}`);
+  } finally {
+    validandoIds.delete(rowId);
+    renderTabela();
   }
 }
 
 async function removerMovimentacao(rowId, btn) {
   if (!confirm("Remover esta movimentação divergente da fila e do estoque?")) return;
+  const activeSession = AUTH.getSession();
+  if (!activeSession) {
+    AUTH.requireAdmin();
+    return;
+  }
 
   const idx = findLogIndex(rowId);
-  const item = idx >= 0 ? logs[idx] : null;
   if (btn) {
     btn.disabled = true;
     btn.textContent = "Removendo...";
   }
 
   try {
-    const res = await fetch(CONFIG.APPS_SCRIPT_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({
-        action: "remover",
-        id: rowId,
-        modelo: item?.modelo || "",
-        tipo: item?.tipo || "",
-        qtd: Number(item?.qtd) || 1,
-        removidoPor: session?.email,
-        removidoEm: new Date().toISOString()
-      })
+    await apiPost({
+      action: "remover",
+      token: activeSession.idToken,
+      id: rowId
     });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json().catch(() => ({}));
-    if (data.erro || data.error || data.ok === false) {
-      throw new Error(data.erro || data.error || "O Apps Script ainda não suporta remoção.");
-    }
 
     const validacoes = getValidacoes();
     delete validacoes[rowId];
@@ -639,6 +644,7 @@ async function removerMovimentacao(rowId, btn) {
     sessionStorage.removeItem("tonerData");
     await carregarPainel();
   } catch (err) {
+    if (handleAuthError(err)) return;
     alert(`Não foi possível remover a movimentação: ${err.message || err}`);
     if (btn) {
       btn.disabled = false;
@@ -649,7 +655,7 @@ async function removerMovimentacao(rowId, btn) {
 
 function renderTabela() {
   const tbody = document.getElementById("val-tbody");
-  const query = (document.getElementById("search-input").value || "").trim().toLowerCase();
+  const query = normalizarTexto(document.getElementById("search-input").value || "");
   const validacoes = getValidacoes();
 
   let pendentesCount = 0;
@@ -668,7 +674,7 @@ function renderTabela() {
     if (filtroAtual !== "todos" && r._status !== filtroAtual) return false;
     if (query) {
       const info = CORES_MAP[r.modelo] || { nome: r.modelo || "" };
-      const text = `${info.nome} ${r.modelo || ""} ${r.resp || ""} ${r.turno || ""}`.toLowerCase();
+      const text = normalizarTexto(`${info.nome} ${r.modelo || ""} ${r.resp || ""} ${r.turno || ""}`);
       if (!text.includes(query)) return false;
     }
     return true;
@@ -679,7 +685,8 @@ function renderTabela() {
     return;
   }
 
-  tbody.innerHTML = filtered.slice(0, 50).map(r => {
+  const visiveis = filtered.slice(0, limiteTabela);
+  let html = visiveis.map(r => {
     const info = CORES_MAP[r.modelo] || { nome: r.modelo || "—", cor: "#888" };
     const dataStr = r.data
       ? new Date(r.data).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
@@ -692,8 +699,9 @@ function renderTabela() {
     const safeId = escapeHtml(r._id);
     const isValidado = r._status === "validado";
     const isDivergente = r._status === "divergente";
+    const busy = validandoIds.has(r._id) ? " disabled" : "";
     const removeBtn = isDivergente
-      ? `<button type="button" class="btn-val delete" data-action="remover" data-id="${safeId}" title="Remover movimentação da fila e do estoque">Remover</button>`
+      ? `<button type="button" class="btn-val delete" data-action="remover" data-id="${safeId}"${busy} title="Remover movimentação da fila e do estoque">Remover</button>`
       : "";
     return `<tr>
       <td style="font-family:var(--mono);font-size:12px;">${dataStr}</td>
@@ -709,30 +717,40 @@ function renderTabela() {
       <td>${statusMap[r._status] || statusMap.pendente}</td>
       <td>
         <div class="action-group">
-          <button type="button" class="btn-val approve${isValidado ? " active" : ""}" data-action="validado" data-id="${safeId}" aria-pressed="${isValidado}">Validar</button>
-          <button type="button" class="btn-val reject${isDivergente ? " active" : ""}" data-action="divergente" data-id="${safeId}" aria-pressed="${isDivergente}">Divergente</button>
+          <button type="button" class="btn-val approve${isValidado ? " active" : ""}" data-action="validado" data-id="${safeId}" aria-pressed="${isValidado}"${busy}>Validar</button>
+          <button type="button" class="btn-val reject${isDivergente ? " active" : ""}" data-action="divergente" data-id="${safeId}" aria-pressed="${isDivergente}"${busy}>Divergente</button>
           ${removeBtn}
         </div>
       </td>
     </tr>`;
   }).join("");
+
+  if (filtered.length > visiveis.length) {
+    html += `<tr><td colspan="7" style="text-align:center;padding:12px;">
+      <button type="button" class="btn-val" data-action="mostrar-mais">Mostrar mais (exibindo ${visiveis.length} de ${filtered.length})</button>
+    </td></tr>`;
+  }
+
+  tbody.innerHTML = html;
 }
 
 document.getElementById("val-tbody").addEventListener("click", e => {
-  const btn = e.target.closest("button[data-action][data-id]");
+  const btn = e.target.closest("button[data-action]");
   if (!btn) return;
   const { action, id } = btn.dataset;
-  if (action === "remover") {
+  if (action === "mostrar-mais") {
+    limiteTabela += 50;
+    renderTabela();
+  } else if (action === "remover" && id) {
     removerMovimentacao(id, btn);
-  } else if (action === "validado" || action === "divergente") {
+  } else if ((action === "validado" || action === "divergente") && id) {
     validarMovimentacao(id, action);
   }
 });
 
 async function atualizarKpisEstoque() {
   try {
-    sessionStorage.removeItem("tonerData");
-    const estoque = await fetchTonerData();
+    const estoque = await fetchTonerData(true);
     const totalCheios = estoque.reduce((acc, row) => acc + (Number(row.cheios) || 0), 0);
     const totalVazios = estoque.reduce((acc, row) => acc + (Number(row.vazios) || 0), 0);
     document.getElementById("kpi-cheios").textContent = totalCheios;
@@ -742,10 +760,6 @@ async function atualizarKpisEstoque() {
     document.getElementById("kpi-vazios").textContent = "—";
   }
 }
-
-const VAZIOS_TI_KEY = "tiVaziosSalaTI";
-let vaziosTI = { W2150XC: 0, W2151XC: 0, W2152XC: 0, W2153XC: 0 };
-let vaziosTISaveTimer = null;
 
 function getVaziosTILocal() {
   try {
@@ -784,13 +798,23 @@ function renderVaziosTI() {
   }).join("");
 }
 
+async function flushVaziosTIPendente() {
+  if (vaziosTISaveTimer) {
+    clearTimeout(vaziosTISaveTimer);
+    vaziosTISaveTimer = null;
+    await salvarVaziosTI();
+  }
+}
+
 async function carregarVaziosTI() {
+  await flushVaziosTIPendente();
   const statusEl = document.getElementById("vazios-ti-status");
+  const activeSession = AUTH.getSession();
+  if (!activeSession) return;
+
   try {
-    const res = await fetch(`${CONFIG.APPS_SCRIPT_URL}?action=getVaziosTI`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    if (!Array.isArray(data)) throw new Error(data?.erro || "Resposta inválida");
+    const data = await apiPost({ action: "getVaziosTI", token: activeSession.idToken });
+    if (!Array.isArray(data)) throw new Error("Resposta inválida");
 
     const next = { W2150XC: 0, W2151XC: 0, W2152XC: 0, W2153XC: 0 };
     data.forEach(item => {
@@ -799,43 +823,42 @@ async function carregarVaziosTI() {
       }
     });
     vaziosTI = next;
+    vaziosTIDirty = false;
     localStorage.setItem(VAZIOS_TI_KEY, JSON.stringify(vaziosTI));
     statusEl.textContent = "Controle separado do armário · Sincronizado com o Google Sheets";
-  } catch {
+  } catch (err) {
+    if (handleAuthError(err)) return;
     vaziosTI = getVaziosTILocal();
-    statusEl.textContent = "Salvo localmente (atualize o Apps Script para sincronizar na planilha)";
+    statusEl.textContent = "Falha ao sincronizar com a planilha (exibindo cache local)";
   }
   renderVaziosTI();
 }
 
 async function salvarVaziosTI() {
   const statusEl = document.getElementById("vazios-ti-status");
+  const activeSession = AUTH.getSession();
+  if (!activeSession) return;
+
+  vaziosTISaveTimer = null;
   statusEl.textContent = "Salvando...";
   try {
-    const res = await fetch(CONFIG.APPS_SCRIPT_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({
-        action: "setVaziosTI",
-        itens: vaziosTI,
-        atualizadoPor: session?.email || "admin",
-        atualizadoEm: new Date().toISOString()
-      })
+    await apiPost({
+      action: "setVaziosTI",
+      token: activeSession.idToken,
+      itens: vaziosTI
     });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json().catch(() => ({}));
-    if (data.erro || data.error || data.ok === false) {
-      throw new Error(data.erro || data.error || "Apps Script não atualizado");
-    }
+    vaziosTIDirty = false;
     statusEl.textContent = "Sincronizado com o Google Sheets";
-  } catch {
-    statusEl.textContent = "Salvo localmente (atualize o Apps Script para sincronizar na planilha)";
+  } catch (err) {
+    if (handleAuthError(err)) return;
+    statusEl.textContent = `Erro ao salvar na planilha: ${err.message || "tente novamente"}`;
   }
 }
 
 function alterarVazioTI(ref, delta) {
   if (!(ref in vaziosTI)) return;
   vaziosTI[ref] = Math.max(0, (Number(vaziosTI[ref]) || 0) + delta);
+  vaziosTIDirty = true;
   localStorage.setItem(VAZIOS_TI_KEY, JSON.stringify(vaziosTI));
   renderVaziosTI();
   clearTimeout(vaziosTISaveTimer);
@@ -845,11 +868,20 @@ function alterarVazioTI(ref, delta) {
 async function zerarVaziosTI() {
   if (!confirm("Zerar a quantidade de toners vazios na Sala de TI (coleta/descarte realizado)?")) return;
   Object.keys(vaziosTI).forEach(ref => { vaziosTI[ref] = 0; });
+  vaziosTIDirty = true;
   localStorage.setItem(VAZIOS_TI_KEY, JSON.stringify(vaziosTI));
   renderVaziosTI();
   clearTimeout(vaziosTISaveTimer);
+  vaziosTISaveTimer = null;
   await salvarVaziosTI();
 }
+
+window.addEventListener("beforeunload", e => {
+  if (vaziosTIDirty || vaziosTISaveTimer) {
+    e.preventDefault();
+    e.returnValue = "";
+  }
+});
 
 document.getElementById("vazios-ti-grid").addEventListener("click", e => {
   const btn = e.target.closest("button[data-vazio-ref][data-delta]");
@@ -864,13 +896,15 @@ async function carregarPainel() {
   await Promise.all([atualizarKpisEstoque(), carregarVaziosTI()]);
 
   try {
-    const res = await fetch(`${CONFIG.APPS_SCRIPT_URL}?action=getLog`);
-    logs = await res.json();
+    const data = await apiGet("getLog");
+    if (!Array.isArray(data)) throw new Error("Resposta inválida do histórico.");
+    logs = data;
     document.getElementById("admin-sync-status").textContent =
       `Sincronizado · ${logs.length} registro${logs.length !== 1 ? "s" : ""} carregado${logs.length !== 1 ? "s" : ""}`;
-  } catch {
+  } catch (err) {
     logs = [];
-    document.getElementById("admin-sync-status").textContent = "Não foi possível carregar o histórico do Apps Script.";
+    document.getElementById("admin-sync-status").textContent =
+      `Não foi possível carregar o histórico: ${err.message || "erro de conexão"}`;
   }
 
   renderTabela();

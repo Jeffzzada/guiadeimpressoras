@@ -266,15 +266,6 @@
     <div class="oauth-box">
       <div id="google-btn-wrap"></div>
 
-      <button type="button" class="btn-demo" id="btn-demo-login">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
-          <polyline points="10 17 15 12 10 7"/>
-          <line x1="15" y1="12" x2="3" y2="12"/>
-        </svg>
-        Entrar em modo preview (sem Client ID)
-      </button>
-
       <div class="oauth-note" id="oauth-note">
         Autenticação via Google Identity Services. Somente e-mails cadastrados na whitelist de TI são liberados.
       </div>
@@ -302,12 +293,11 @@
 
   const alertBox  = document.getElementById("auth-alert");
   const alertText = document.getElementById("auth-alert-text");
-  const demoBtn   = document.getElementById("btn-demo-login");
   const btnWrap   = document.getElementById("google-btn-wrap");
 
-  function showAlert(type, html) {
+  function showAlert(type, message) {
     alertBox.className = `auth-alert show ${type}`;
-    alertText.innerHTML = html;
+    alertText.textContent = message;
   }
 
   const params = new URLSearchParams(window.location.search);
@@ -334,11 +324,10 @@
   function renderGoogleButton() {
     if (!AUTH.isClientConfigured()) {
       btnWrap.style.display = "none";
-      demoBtn.classList.add("show");
       if (reason !== "auth" && reason !== "timeout") {
         showAlert(
-          "warn",
-          "<strong>Google Client ID não configurado.</strong> Defina <code>CONFIG.GOOGLE_CLIENT_ID</code> e <code>CONFIG.ADMIN_WHITELIST</code> em <code>app.js</code> para ativar o OAuth real."
+          "error",
+          "Google Client ID não configurado em app.js. Contate o administrador de TI."
         );
       }
       return;
@@ -366,13 +355,6 @@
       width: 320
     });
   }
-
-  demoBtn.addEventListener("click", () => {
-    const session = AUTH.loginDemo();
-    if (session) {
-      window.location.href = "admin.html";
-    }
-  });
 
   window.addEventListener("load", renderGoogleButton);
 })();

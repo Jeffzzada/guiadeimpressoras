@@ -38,6 +38,18 @@
   .turno-t1 { background: #E8F4FD; color: #1565C0; }
   .turno-t2 { background: #FFF3E0; color: #E65100; }
   .turno-t3 { background: #F3E5F5; color: #6A1B9A; }
+  .form-error {
+    display: none;
+    margin-top: 12px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    background: #FDECEA;
+    border: 1px solid #F5C2BC;
+    color: #9E2A1C;
+    font-size: 12.5px;
+    line-height: 1.4;
+  }
+  .form-error.show { display: block; }
 </style>
 </head>
 <body>
@@ -229,6 +241,8 @@
       <input class="form-input" id="m-obs" type="text" placeholder="Ex: NF 12345, Fornecedor XYZ">
     </div>
 
+    <div class="form-error" id="modal-error" role="alert"></div>
+
     <div class="modal-actions">
       <button class="btn-cancel" onclick="fecharModal()">Cancelar</button>
       <button class="btn-submit" id="btn-submit" onclick="submeterMovimentacao()">Registrar</button>
@@ -238,20 +252,6 @@
 
 <script src="app.js"></script>
 <script>
-const CORES_MAP = {
-  W2150XC: { nome: "Preto",   cor: "#2D2D2D" },
-  W2151XC: { nome: "Ciano",   cor: "#0070C0" },
-  W2152XC: { nome: "Amarelo", cor: "#CCA800" },
-  W2153XC: { nome: "Magenta", cor: "#C0004A" }
-};
-
-const TIPO_LABEL = {
-  entrada_cheio: "Entrada — cheio",
-  saida_cheio:   "Saída — instalado",
-  entrada_vazio: "Entrada — vazio",
-  saida_vazio:   "Saída — descarte"
-};
-
 let turnoSelecionado = "T1";
 let tonerData = [];
 
@@ -300,8 +300,8 @@ function renderEstoque(data) {
       <td>
         <div class="cor-cell">
           <span class="cor-dot" style="background:${info.cor}"></span>
-          <span style="font-weight:500;color:var(--ink)">${info.nome}</span>
-          <span style="font-family:var(--mono);font-size:11px;color:var(--ink-soft);margin-left:8px;">${row.ref}</span>
+          <span style="font-weight:500;color:var(--ink)">${escapeHtml(info.nome)}</span>
+          <span style="font-family:var(--mono);font-size:11px;color:var(--ink-soft);margin-left:8px;">${escapeHtml(row.ref)}</span>
         </div>
       </td>
       <td><span class="badge-full">${cheios}</span></td>
@@ -319,8 +319,8 @@ function renderEstoque(data) {
 async function renderLog() {
   const tbody = document.getElementById("log-tbody");
   try {
-    const res = await fetch(`${CONFIG.APPS_SCRIPT_URL}?action=getLog`);
-    const log  = await res.json();
+    const log = await apiGet("getLog");
+    if (!Array.isArray(log)) throw new Error("Histórico inválido");
 
     if (!log.length) {
       tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--ink-soft);padding:20px;">Nenhuma movimentação registrada.</td></tr>`;
@@ -340,13 +340,13 @@ async function renderLog() {
         <td>
           <div class="cor-cell">
             <span class="cor-dot" style="background:${info.cor}"></span>
-            ${info.nome}
+            ${escapeHtml(info.nome)}
           </div>
         </td>
-        <td><span class="tag ${isIn ? "tag-in" : "tag-out"}">${TIPO_LABEL[r.tipo] || r.tipo}</span></td>
-        <td style="font-family:var(--mono)">${r.qtd || 1}</td>
-        <td>${turno !== "—" ? `<span class="turno-label ${turnoClass}">${turno}</span>` : "—"}</td>
-        <td>${r.resp || "—"}</td>
+        <td><span class="tag ${isIn ? "tag-in" : "tag-out"}">${escapeHtml(TIPO_LABEL[r.tipo] || r.tipo)}</span></td>
+        <td style="font-family:var(--mono)">${Number(r.qtd) || 1}</td>
+        <td>${turno !== "—" ? `<span class="turno-label ${turnoClass}">${escapeHtml(turno)}</span>` : "—"}</td>
+        <td>${escapeHtml(r.resp || "—")}</td>
       </tr>`;
     }).join("");
   } catch {
@@ -355,52 +355,69 @@ async function renderLog() {
 }
 
 /* ── MODAL ── */
-function abrirModal()  { document.getElementById("modal-overlay").classList.add("open"); }
-function fecharModal() { document.getElementById("modal-overlay").classList.remove("open"); }
+function setModalError(msg = "") {
+  const errEl = document.getElementById("modal-error");
+  errEl.textContent = msg;
+  errEl.classList.toggle("show", Boolean(msg));
+}
+
+function resetModal() {
+  document.getElementById("m-modelo").selectedIndex = 0;
+  document.getElementById("m-tipo").selectedIndex = 0;
+  document.getElementById("m-qtd").value = "1";
+  document.getElementById("m-qtd").style.borderColor = "";
+  document.getElementById("m-resp").value = "";
+  document.getElementById("m-resp").style.borderColor = "";
+  document.getElementById("m-obs").value = "";
+  document.querySelectorAll(".turno-btn").forEach((b, i) => b.classList.toggle("selected", i === 0));
+  turnoSelecionado = "T1";
+  setModalError("");
+}
+
+function abrirModal()  { setModalError(""); document.getElementById("modal-overlay").classList.add("open"); }
+function fecharModal() { document.getElementById("modal-overlay").classList.remove("open"); resetModal(); }
 document.getElementById("modal-overlay").addEventListener("click", e => { if (e.target === e.currentTarget) fecharModal(); });
 
 async function submeterMovimentacao() {
   const modelo = document.getElementById("m-modelo").value;
   const tipo   = document.getElementById("m-tipo").value;
-  const qtd    = parseInt(document.getElementById("m-qtd").value) || 1;
-  const resp   = document.getElementById("m-resp").value.trim();
+  const qtdEl  = document.getElementById("m-qtd");
+  const respEl = document.getElementById("m-resp");
+  const rawQtd = qtdEl.value.trim();
+  const qtd    = /^\d+$/.test(rawQtd) ? Number(rawQtd) : NaN;
+  const resp   = respEl.value.trim();
   const obs    = document.getElementById("m-obs").value.trim();
   const turno  = turnoSelecionado;
 
-  if (!resp) {
-    document.getElementById("m-resp").focus();
-    document.getElementById("m-resp").style.borderColor = "var(--shopee)";
+  qtdEl.style.borderColor = "";
+  respEl.style.borderColor = "";
+  setModalError("");
+
+  if (!Number.isInteger(qtd) || qtd < 1 || qtd > 20) {
+    qtdEl.style.borderColor = "var(--shopee)";
+    qtdEl.focus();
+    setModalError("Informe uma quantidade inteira entre 1 e 20.");
     return;
   }
 
+  if (!resp) {
+    respEl.style.borderColor = "var(--shopee)";
+    respEl.focus();
+    setModalError("Informe o nome do responsável.");
+    return;
+  }
   const btn = document.getElementById("btn-submit");
   btn.textContent = "Registrando...";
   btn.disabled = true;
 
   try {
     const payload = { action: "registrar", modelo, tipo, qtd, resp, obs, turno, data: new Date().toISOString() };
-    const res = await fetch(CONFIG.APPS_SCRIPT_URL, {
-      method: "POST",
-      body: JSON.stringify(payload),
-      headers: { "Content-Type": "text/plain;charset=utf-8" }
-    });
-
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const result = await res.json().catch(() => ({}));
-    if (result.erro || result.error) throw new Error(result.erro || result.error);
-
+    await apiPost(payload);
     sessionStorage.removeItem("tonerData");
     await loadEstoque(true);
     fecharModal();
-
-    // reset form
-    document.getElementById("m-resp").value = "";
-    document.getElementById("m-obs").value = "";
-    document.getElementById("m-qtd").value = "1";
-    document.querySelectorAll(".turno-btn").forEach((b,i) => b.classList.toggle("selected", i===0));
-    turnoSelecionado = "T1";
-  } catch {
-    alert("Erro ao registrar. Verifique a conexão com o Apps Script.");
+  } catch (err) {
+    setModalError(err?.message || "Erro ao registrar. Verifique a conexão com o Apps Script.");
   }
 
   btn.textContent = "Registrar";
