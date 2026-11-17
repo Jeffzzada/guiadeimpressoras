@@ -116,8 +116,56 @@
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 14px;
-    margin-bottom: 28px;
+    margin-bottom: 20px;
   }
+  .kpi-grid-2 { grid-template-columns: repeat(2, 1fr); }
+  .kpi-grid-3 { grid-template-columns: repeat(3, 1fr); }
+
+  .group-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 28px 0 16px;
+  }
+  .group-divider-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 5px 12px;
+    border-radius: 100px;
+    border: 1px solid var(--border);
+    background: var(--white);
+    color: var(--ink-mid);
+    white-space: nowrap;
+  }
+  .group-divider-badge.ti {
+    border-color: rgba(238, 77, 45, 0.32);
+    background: var(--shopee-light);
+    color: var(--shopee);
+  }
+  .group-divider-line {
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .alert-ti-banner {
+    display: none;
+    margin-bottom: 18px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    background: var(--warning-bg);
+    border: 1px solid rgba(154, 90, 0, 0.35);
+    color: var(--warning);
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.45;
+  }
+  .alert-ti-banner.show { display: block; }
   .kpi-card {
     background: var(--white);
     border: 1px solid var(--border);
@@ -348,7 +396,7 @@
   .bulk-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
   @media (max-width: 900px) {
-    .kpi-grid, .vazios-ti-grid { grid-template-columns: repeat(2, 1fr); }
+    .kpi-grid, .kpi-grid-3, .vazios-ti-grid { grid-template-columns: repeat(2, 1fr); }
   }
 
   @media (max-width: 760px) {
@@ -364,7 +412,7 @@
   }
 
   @media (max-width: 700px) {
-    .kpi-grid, .vazios-ti-grid { grid-template-columns: 1fr; }
+    .kpi-grid, .kpi-grid-2, .kpi-grid-3, .vazios-ti-grid { grid-template-columns: 1fr; }
     .admin-user-bar { flex-direction: column; align-items: flex-start; }
 
   }
@@ -441,26 +489,38 @@
     </div>
   </div>
 
-  <div class="kpi-grid">
+  <div class="group-divider">
+    <span class="group-divider-badge ti">Armário de TI · Restrito Admin</span>
+    <span class="group-divider-line"></span>
+  </div>
+
+  <div class="alert-ti-banner" id="alerta-reposicao-admin" role="alert"></div>
+
+  <div class="kpi-grid kpi-grid-2">
     <div class="kpi-card">
       <div class="kpi-label">Cheios · Armário TI</div>
-      <div class="kpi-value" id="kpi-cheios">—</div>
-      <div class="kpi-sub">Disponíveis no armário TI</div>
-    </div>
-    <div class="kpi-card">
-      <div class="kpi-label">Vazios · Armário TI</div>
-      <div class="kpi-value" id="kpi-vazios">—</div>
-      <div class="kpi-sub">No armário inferior da impressora</div>
+      <div class="kpi-value" id="kpi-armario-ti">0</div>
+      <div class="kpi-sub">Disponíveis na sala/armário de TI (visível só para admins)</div>
     </div>
     <div class="kpi-card">
       <div class="kpi-label">Vazios · Sala de TI</div>
       <div class="kpi-value" id="kpi-vazios-ti">0</div>
-      <div class="kpi-sub">Armazenados na sala de TI</div>
+      <div class="kpi-sub">Armazenados na sala de TI para descarte</div>
     </div>
-    <div class="kpi-card">
-      <div class="kpi-label">Pendentes de Validação</div>
-      <div class="kpi-value" id="kpi-pendentes">—</div>
-      <div class="kpi-sub">Movimentações recentes</div>
+  </div>
+
+  <div class="section">
+    <div class="toner-panel">
+      <div class="panel-head">
+        <div>
+          <div class="panel-title">Toners cheios — Armário de TI</div>
+          <div class="panel-sub" id="armario-ti-status">Carregando...</div>
+        </div>
+        <button type="button" class="btn-refresh" onclick="armarioTICtrl.zerar()">
+          Zerar armário TI
+        </button>
+      </div>
+      <div class="vazios-ti-grid" id="armario-ti-grid"></div>
     </div>
   </div>
 
@@ -471,11 +531,34 @@
           <div class="panel-title">Toners vazios — Sala de TI</div>
           <div class="panel-sub" id="vazios-ti-status">Carregando...</div>
         </div>
-        <button type="button" class="btn-refresh" onclick="zerarVaziosTI()">
+        <button type="button" class="btn-refresh" onclick="vaziosTICtrl.zerar()">
           Zerar sala de TI
         </button>
       </div>
       <div class="vazios-ti-grid" id="vazios-ti-grid"></div>
+    </div>
+  </div>
+
+  <div class="group-divider">
+    <span class="group-divider-badge">Armário da Impressora · Operação</span>
+    <span class="group-divider-line"></span>
+  </div>
+
+  <div class="kpi-grid kpi-grid-3">
+    <div class="kpi-card">
+      <div class="kpi-label">Cheios · Impressora</div>
+      <div class="kpi-value" id="kpi-cheios">—</div>
+      <div class="kpi-sub">Disponíveis no armário inferior da impressora</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Vazios · Impressora</div>
+      <div class="kpi-value" id="kpi-vazios">—</div>
+      <div class="kpi-sub">No armário inferior da impressora</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Pendentes de Validação</div>
+      <div class="kpi-value" id="kpi-pendentes">—</div>
+      <div class="kpi-sub">Movimentações recentes</div>
     </div>
   </div>
 
@@ -541,17 +624,15 @@
 <script>
 const session = AUTH.requireAdmin();
 const VALIDACOES_KEY = "tiValidacoesEstoque";
-const VAZIOS_TI_KEY = "tiVaziosSalaTI";
+const VAZIOS_TI_KEY  = "tiVaziosSalaTI";
+const ARMARIO_TI_KEY = "tiArmarioTI";
 
 let logs = [];
+let ultimoEstoque = [];
 let filtroAtual = "todos";
 let limiteTabela = 50;
 let isBulkValidating = false;
 const validandoIds = new Set();
-
-let vaziosTI = { W2150XC: 0, W2151XC: 0, W2152XC: 0, W2153XC: 0 };
-let vaziosTISaveTimer = null;
-let vaziosTIDirty = false;
 
 if (session) {
   document.getElementById("admin-name").textContent = session.name;
@@ -908,12 +989,37 @@ document.getElementById("val-tbody").addEventListener("click", e => {
   }
 });
 
+function atualizarAlertaReposicaoAdmin() {
+  const banner = document.getElementById("alerta-reposicao-admin");
+  if (!banner || !ultimoEstoque.length) return;
+  const faltando = ultimoEstoque
+    .filter(row => {
+      const imp = Number(row.cheios) || 0;
+      const ti  = Number(armarioTICtrl.valores[row.ref]) || 0;
+      return row.solicitarTI || imp < ti;
+    })
+    .map(row => ((CORES_MAP[row.ref] && CORES_MAP[row.ref].nome) || row.ref).toLowerCase());
+
+  if (faltando.length === 1) {
+    banner.textContent = `⚠ Armário da impressora abaixo do Armário de TI para o toner ${faltando[0]} — retire da sala de TI ou oriente a operação a solicitar ao TI.`;
+    banner.classList.add("show");
+  } else if (faltando.length > 1) {
+    banner.textContent = `⚠ Armário da impressora abaixo do Armário de TI para os toners: ${faltando.join(", ")} — retire da sala de TI.`;
+    banner.classList.add("show");
+  } else {
+    banner.textContent = "";
+    banner.classList.remove("show");
+  }
+}
+
 function atualizarKpisComDados(estoque) {
-  sessionStorage.setItem("tonerData", JSON.stringify(estoque));
-  const totalCheios = estoque.reduce((acc, row) => acc + (Number(row.cheios) || 0), 0);
-  const totalVazios = estoque.reduce((acc, row) => acc + (Number(row.vazios) || 0), 0);
+  ultimoEstoque = Array.isArray(estoque) ? estoque : [];
+  sessionStorage.setItem("tonerData", JSON.stringify(ultimoEstoque));
+  const totalCheios = ultimoEstoque.reduce((acc, row) => acc + (Number(row.cheios) || 0), 0);
+  const totalVazios = ultimoEstoque.reduce((acc, row) => acc + (Number(row.vazios) || 0), 0);
   document.getElementById("kpi-cheios").textContent = totalCheios;
   document.getElementById("kpi-vazios").textContent = totalVazios;
+  atualizarAlertaReposicaoAdmin();
 }
 
 async function atualizarKpisEstoque() {
@@ -927,7 +1033,7 @@ async function atualizarKpisEstoque() {
 }
 
 async function zerarEstoque(btn) {
-  if (!confirm("Zerar TODO o estoque do Armário TI (cheios e vazios de todas as cores irão para 0)?")) return;
+  if (!confirm("Zerar TODO o estoque do Armário da Impressora (cheios e vazios de todas as cores irão para 0)?")) return;
   const activeSession = AUTH.getSession();
   if (!activeSession) {
     AUTH.requireAdmin();
@@ -955,27 +1061,33 @@ async function zerarEstoque(btn) {
   }
 }
 
-function getVaziosTILocal() {
-  try {
-    const raw = JSON.parse(localStorage.getItem(VAZIOS_TI_KEY) || "{}");
-    const result = {};
-    Object.keys(CORES_MAP).forEach(ref => {
-      result[ref] = Math.max(0, Math.floor(Number(raw[ref]) || 0));
-    });
-    return result;
-  } catch {
-    return { W2150XC: 0, W2151XC: 0, W2152XC: 0, W2153XC: 0 };
-  }
-}
+function createContagemTIController(cfg) {
+  const ctrl = {
+    valores: { W2150XC: 0, W2151XC: 0, W2152XC: 0, W2153XC: 0 },
+    saveTimer: null,
+    dirty: false,
 
-function renderVaziosTI() {
-  const grid = document.getElementById("vazios-ti-grid");
-  const total = Object.values(vaziosTI).reduce((acc, n) => acc + (Number(n) || 0), 0);
-  document.getElementById("kpi-vazios-ti").textContent = total;
+    getLocal() {
+      try {
+        const raw = JSON.parse(localStorage.getItem(cfg.storageKey) || "{}");
+        const result = {};
+        Object.keys(CORES_MAP).forEach(ref => {
+          result[ref] = Math.max(0, Math.floor(Number(raw[ref]) || 0));
+        });
+        return result;
+      } catch {
+        return { W2150XC: 0, W2151XC: 0, W2152XC: 0, W2153XC: 0 };
+      }
+    },
 
-  grid.innerHTML = Object.entries(CORES_MAP).map(([ref, info]) => {
-    const qtd = Math.max(0, Number(vaziosTI[ref]) || 0);
-    return `<div class="vazio-ti-card">
+    render() {
+      const grid = document.getElementById(cfg.gridId);
+      const total = Object.values(ctrl.valores).reduce((acc, n) => acc + (Number(n) || 0), 0);
+      document.getElementById(cfg.kpiId).textContent = total;
+
+      grid.innerHTML = Object.entries(CORES_MAP).map(([ref, info]) => {
+        const qtd = Math.max(0, Number(ctrl.valores[ref]) || 0);
+        return `<div class="vazio-ti-card">
       <div class="vazio-ti-head">
         <div class="cor-cell">
           <span class="cor-dot" style="background:${info.cor}"></span>
@@ -984,110 +1096,150 @@ function renderVaziosTI() {
         <span class="vazio-ti-ref">${escapeHtml(ref)}</span>
       </div>
       <div class="vazio-ti-ctrl">
-        <button type="button" class="btn-qty" data-vazio-ref="${escapeHtml(ref)}" data-delta="-1" ${qtd === 0 ? "disabled" : ""} aria-label="Diminuir ${escapeHtml(info.nome)}">−</button>
+        <button type="button" class="btn-qty" data-ti-ref="${escapeHtml(ref)}" data-delta="-1" ${qtd === 0 ? "disabled" : ""} aria-label="Diminuir ${escapeHtml(info.nome)}">−</button>
         <span class="vazio-ti-val">${qtd}</span>
-        <button type="button" class="btn-qty" data-vazio-ref="${escapeHtml(ref)}" data-delta="1" aria-label="Aumentar ${escapeHtml(info.nome)}">+</button>
+        <button type="button" class="btn-qty" data-ti-ref="${escapeHtml(ref)}" data-delta="1" aria-label="Aumentar ${escapeHtml(info.nome)}">+</button>
       </div>
     </div>`;
-  }).join("");
-}
+      }).join("");
 
-async function flushVaziosTIPendente() {
-  if (vaziosTISaveTimer) {
-    clearTimeout(vaziosTISaveTimer);
-    vaziosTISaveTimer = null;
-    await salvarVaziosTI();
-  }
-}
+      if (typeof cfg.onRender === "function") cfg.onRender();
+    },
 
-async function carregarVaziosTI() {
-  await flushVaziosTIPendente();
-  const statusEl = document.getElementById("vazios-ti-status");
-  const activeSession = AUTH.getSession();
-  if (!activeSession) return;
-
-  try {
-    const data = await apiPost({ action: "getVaziosTI", token: activeSession.idToken });
-    if (!Array.isArray(data)) throw new Error("Resposta inválida");
-
-    const next = { W2150XC: 0, W2151XC: 0, W2152XC: 0, W2153XC: 0 };
-    data.forEach(item => {
-      if (item && item.ref in next) {
-        next[item.ref] = Math.max(0, Math.floor(Number(item.qtd) || 0));
+    async flush() {
+      if (ctrl.saveTimer) {
+        clearTimeout(ctrl.saveTimer);
+        ctrl.saveTimer = null;
+        await ctrl.salvar();
       }
-    });
-    vaziosTI = next;
-    vaziosTIDirty = false;
-    localStorage.setItem(VAZIOS_TI_KEY, JSON.stringify(vaziosTI));
-    statusEl.textContent = "Controle separado do armário · Sincronizado com o Google Sheets";
-  } catch (err) {
-    if (handleAuthError(err)) return;
-    vaziosTI = getVaziosTILocal();
-    statusEl.textContent = "Falha ao sincronizar com a planilha (exibindo cache local)";
-  }
-  renderVaziosTI();
+    },
+
+    async carregar() {
+      await ctrl.flush();
+      const statusEl = document.getElementById(cfg.statusId);
+      const activeSession = AUTH.getSession();
+      if (!activeSession) return;
+
+      try {
+        const data = await apiPost({ action: cfg.getAction, token: activeSession.idToken });
+        if (!Array.isArray(data)) throw new Error("Resposta inválida");
+
+        const next = { W2150XC: 0, W2151XC: 0, W2152XC: 0, W2153XC: 0 };
+        data.forEach(item => {
+          if (item && item.ref in next) {
+            next[item.ref] = Math.max(0, Math.floor(Number(item[cfg.valueKey]) || 0));
+          }
+        });
+        ctrl.valores = next;
+        ctrl.dirty = false;
+        localStorage.setItem(cfg.storageKey, JSON.stringify(ctrl.valores));
+        statusEl.textContent = cfg.syncedMsg;
+      } catch (err) {
+        if (handleAuthError(err)) return;
+        ctrl.valores = ctrl.getLocal();
+        statusEl.textContent = "Falha ao sincronizar com a planilha (exibindo cache local)";
+      }
+      ctrl.render();
+    },
+
+    async salvar() {
+      const statusEl = document.getElementById(cfg.statusId);
+      const activeSession = AUTH.getSession();
+      if (!activeSession) return;
+
+      ctrl.saveTimer = null;
+      statusEl.textContent = "Salvando...";
+      try {
+        const res = await apiPost({
+          action: cfg.setAction,
+          token: activeSession.idToken,
+          itens: ctrl.valores
+        });
+        ctrl.dirty = false;
+        statusEl.textContent = "Sincronizado com o Google Sheets";
+        if (typeof cfg.onAfterSave === "function") cfg.onAfterSave(res);
+      } catch (err) {
+        if (handleAuthError(err)) return;
+        statusEl.textContent = `Erro ao salvar na planilha: ${err.message || "tente novamente"}`;
+      }
+    },
+
+    alterar(ref, delta) {
+      if (!(ref in ctrl.valores)) return;
+      ctrl.valores[ref] = Math.max(0, (Number(ctrl.valores[ref]) || 0) + delta);
+      ctrl.dirty = true;
+      localStorage.setItem(cfg.storageKey, JSON.stringify(ctrl.valores));
+      ctrl.render();
+      clearTimeout(ctrl.saveTimer);
+      ctrl.saveTimer = setTimeout(() => ctrl.salvar(), 400);
+    },
+
+    async zerar() {
+      if (!confirm(cfg.confirmZerarMsg)) return;
+      Object.keys(ctrl.valores).forEach(ref => { ctrl.valores[ref] = 0; });
+      ctrl.dirty = true;
+      localStorage.setItem(cfg.storageKey, JSON.stringify(ctrl.valores));
+      ctrl.render();
+      clearTimeout(ctrl.saveTimer);
+      ctrl.saveTimer = null;
+      await ctrl.salvar();
+    }
+  };
+
+  document.getElementById(cfg.gridId).addEventListener("click", e => {
+    const btn = e.target.closest("button[data-ti-ref][data-delta]");
+    if (!btn) return;
+    ctrl.alterar(btn.dataset.tiRef, Number(btn.dataset.delta) || 0);
+  });
+
+  return ctrl;
 }
 
-async function salvarVaziosTI() {
-  const statusEl = document.getElementById("vazios-ti-status");
-  const activeSession = AUTH.getSession();
-  if (!activeSession) return;
-
-  vaziosTISaveTimer = null;
-  statusEl.textContent = "Salvando...";
-  try {
-    await apiPost({
-      action: "setVaziosTI",
-      token: activeSession.idToken,
-      itens: vaziosTI
-    });
-    vaziosTIDirty = false;
-    statusEl.textContent = "Sincronizado com o Google Sheets";
-  } catch (err) {
-    if (handleAuthError(err)) return;
-    statusEl.textContent = `Erro ao salvar na planilha: ${err.message || "tente novamente"}`;
-  }
-}
-
-function alterarVazioTI(ref, delta) {
-  if (!(ref in vaziosTI)) return;
-  vaziosTI[ref] = Math.max(0, (Number(vaziosTI[ref]) || 0) + delta);
-  vaziosTIDirty = true;
-  localStorage.setItem(VAZIOS_TI_KEY, JSON.stringify(vaziosTI));
-  renderVaziosTI();
-  clearTimeout(vaziosTISaveTimer);
-  vaziosTISaveTimer = setTimeout(salvarVaziosTI, 400);
-}
-
-async function zerarVaziosTI() {
-  if (!confirm("Zerar a quantidade de toners vazios na Sala de TI (coleta/descarte realizado)?")) return;
-  Object.keys(vaziosTI).forEach(ref => { vaziosTI[ref] = 0; });
-  vaziosTIDirty = true;
-  localStorage.setItem(VAZIOS_TI_KEY, JSON.stringify(vaziosTI));
-  renderVaziosTI();
-  clearTimeout(vaziosTISaveTimer);
-  vaziosTISaveTimer = null;
-  await salvarVaziosTI();
-}
-
-window.addEventListener("beforeunload", e => {
-  if (vaziosTIDirty || vaziosTISaveTimer) {
-    e.preventDefault();
-    e.returnValue = "";
+const armarioTICtrl = createContagemTIController({
+  storageKey: ARMARIO_TI_KEY,
+  kpiId: "kpi-armario-ti",
+  gridId: "armario-ti-grid",
+  statusId: "armario-ti-status",
+  getAction: "getArmarioTI",
+  setAction: "setArmarioTI",
+  valueKey: "cheios",
+  syncedMsg: "Estoque exclusivo de TI · Sincronizado com o Google Sheets",
+  confirmZerarMsg: "Zerar o saldo de toners cheios no Armário de TI?",
+  onRender: () => atualizarAlertaReposicaoAdmin(),
+  onAfterSave: res => {
+    if (Array.isArray(res?.estoque)) {
+      atualizarKpisComDados(res.estoque);
+      loadTonerPill();
+    } else {
+      atualizarKpisEstoque();
+    }
   }
 });
 
-document.getElementById("vazios-ti-grid").addEventListener("click", e => {
-  const btn = e.target.closest("button[data-vazio-ref][data-delta]");
-  if (!btn) return;
-  alterarVazioTI(btn.dataset.vazioRef, Number(btn.dataset.delta) || 0);
+const vaziosTICtrl = createContagemTIController({
+  storageKey: VAZIOS_TI_KEY,
+  kpiId: "kpi-vazios-ti",
+  gridId: "vazios-ti-grid",
+  statusId: "vazios-ti-status",
+  getAction: "getVaziosTI",
+  setAction: "setVaziosTI",
+  valueKey: "qtd",
+  syncedMsg: "Controle de descarte · Sincronizado com o Google Sheets",
+  confirmZerarMsg: "Zerar a quantidade de toners vazios na Sala de TI (coleta/descarte realizado)?"
+});
+
+window.addEventListener("beforeunload", e => {
+  if (armarioTICtrl.dirty || armarioTICtrl.saveTimer || vaziosTICtrl.dirty || vaziosTICtrl.saveTimer) {
+    e.preventDefault();
+    e.returnValue = "";
+  }
 });
 
 async function carregarPainel() {
   const icon = document.getElementById("refresh-icon");
   icon.classList.add("spinning");
 
-  await Promise.all([atualizarKpisEstoque(), carregarVaziosTI()]);
+  await Promise.all([atualizarKpisEstoque(), armarioTICtrl.carregar(), vaziosTICtrl.carregar()]);
 
   try {
     const data = await apiGet("getLog");

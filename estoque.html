@@ -206,6 +206,20 @@
   }
   .form-error.show { display: block; }
 
+  .alert-ti-banner {
+    display: none;
+    margin-bottom: 20px;
+    padding: 13px 16px;
+    border-radius: 8px;
+    background: var(--warning-bg);
+    border: 1px solid rgba(154, 90, 0, 0.35);
+    color: var(--warning);
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.45;
+  }
+  .alert-ti-banner.show { display: block; }
+
   @media (max-width: 900px) {
     .cheios-grid { grid-template-columns: repeat(2, 1fr); }
     .editor-bar { grid-template-columns: 1fr 1fr; }
@@ -287,12 +301,14 @@
     <p class="page-desc">Ajuste a quantidade de toners cheios usando − e +, informe seu nome e clique em Salvar para registrar a movimentação.</p>
   </div>
 
+  <div class="alert-ti-banner" id="alerta-retirada-ti" role="alert"></div>
+
   <!-- EDITOR VISUAL DE TONERS CHEIOS -->
   <div class="section">
     <div class="toner-panel">
       <div class="panel-head">
         <div>
-          <div class="panel-title">Toners cheios — Armário TI</div>
+          <div class="panel-title">Toners cheios — Armário da Impressora</div>
           <div class="panel-sub" id="last-updated">Carregando...</div>
         </div>
         <button class="btn-refresh" onclick="loadEstoque(true)">
@@ -345,7 +361,7 @@
     <div class="toner-panel">
       <div class="panel-head">
         <div>
-          <div class="panel-title">Resumo completo — Armário TI</div>
+          <div class="panel-title">Resumo completo — Armário da Impressora</div>
           <div class="panel-sub">Visão consolidada de toners cheios e vazios</div>
         </div>
       </div>
@@ -787,9 +803,27 @@ async function loadEstoque(force = false) {
 
 function renderEstoque(data) {
   const tbody = document.getElementById("estoque-tbody");
+  const banner = document.getElementById("alerta-retirada-ti");
   if (!data.length) {
+    if (banner) banner.classList.remove("show");
     tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--ink-soft);padding:24px;">Nenhum dado encontrado na planilha.</td></tr>`;
     return;
+  }
+
+  if (banner) {
+    const pendentesTI = data
+      .filter(r => r && r.solicitarTI)
+      .map(r => ((CORES_MAP[r.ref] && CORES_MAP[r.ref].nome) || r.ref).toLowerCase());
+    if (pendentesTI.length === 1) {
+      banner.textContent = `⚠ Peça para que o TI retire o toner ${pendentesTI[0]} da sala.`;
+      banner.classList.add("show");
+    } else if (pendentesTI.length > 1) {
+      banner.textContent = `⚠ Peça para que o TI retire os toners ${pendentesTI.join(", ")} da sala.`;
+      banner.classList.add("show");
+    } else {
+      banner.textContent = "";
+      banner.classList.remove("show");
+    }
   }
 
   tbody.innerHTML = data.map(row => {
@@ -797,11 +831,7 @@ function renderEstoque(data) {
     const vazios = Number(row.vazios) || 0;
     const total  = cheios + vazios;
     const info   = CORES_MAP[row.ref] || { nome: row.ref, cor: "#888" };
-    const status = cheios === 0
-      ? `<span style="color:#C0392B;font-weight:600;font-size:12px;">⚠ Sem estoque</span>`
-      : cheios <= 1
-      ? `<span style="color:#E67E22;font-weight:600;font-size:12px;">⚡ Estoque baixo</span>`
-      : `<span style="color:var(--success);font-weight:600;font-size:12px;">✓ Normal</span>`;
+    const status = formatarStatusToner(row, false);
 
     return `<tr>
       <td>

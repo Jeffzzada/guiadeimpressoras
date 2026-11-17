@@ -105,18 +105,37 @@ async function fetchTonerData(force = false) {
   return _tonerDataInFlight;
 }
 
+/* ── STATUS HELPER ── */
+function formatarStatusToner(row, compact = false) {
+  const cheios = Number(row?.cheios) || 0;
+  const cor = ((CORES_MAP[row?.ref] && CORES_MAP[row.ref].nome) || row?.ref || "").toLowerCase();
+  if (row?.solicitarTI) {
+    const prefix = cheios === 0 ? "⚠ Sem estoque · " : "⚠ ";
+    return `<span style="color:${cheios === 0 ? "#C0392B" : "#E67E22"};font-weight:600;font-size:12px;">${prefix}Peça para que o TI retire o toner ${escapeHtml(cor)} da sala</span>`;
+  }
+  if (cheios === 0) {
+    return `<span style="color:#C0392B;font-weight:600;font-size:12px;">⚠ Sem estoque</span>`;
+  }
+  if (cheios <= 1) {
+    return `<span style="color:#E67E22;font-weight:600;font-size:12px;">⚡ ${compact ? "Baixo" : "Estoque baixo"}</span>`;
+  }
+  return `<span style="color:var(--success);font-weight:600;font-size:12px;">✓ Normal</span>`;
+}
+
 /* ── TONER PILL (topnav) ── */
 async function loadTonerPill() {
   const pill = document.getElementById("toner-pill");
   if (!pill) return;
   try {
     const data = await fetchTonerData();
-    const semEstoque = data.some(d => Number(d.cheios) === 0);
-    const baixo      = data.some(d => Number(d.cheios) <= 1);
+    const semEstoque  = data.some(d => Number(d.cheios) === 0);
+    const solicitarTI = data.some(d => Boolean(d.solicitarTI));
+    const baixo       = data.some(d => Number(d.cheios) <= 1);
     const dot = pill.querySelector(".pill-dot");
-    if (semEstoque) { dot.className = "pill-dot crit"; pill.title = "Sem estoque em algum toner!"; }
-    else if (baixo) { dot.className = "pill-dot warn"; pill.title = "Estoque baixo em algum toner"; }
-    else            { dot.className = "pill-dot";      pill.title = "Estoque normal"; }
+    if (semEstoque)       { dot.className = "pill-dot crit"; pill.title = solicitarTI ? "Sem estoque — peça para o TI retirar toner da sala!" : "Sem estoque em algum toner!"; }
+    else if (solicitarTI) { dot.className = "pill-dot warn"; pill.title = "Peça para que o TI retire toner da sala"; }
+    else if (baixo)       { dot.className = "pill-dot warn"; pill.title = "Estoque baixo em algum toner"; }
+    else                  { dot.className = "pill-dot";      pill.title = "Estoque normal"; }
   } catch { /* silencioso — pill fica cinza */ }
 }
 

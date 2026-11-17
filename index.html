@@ -120,7 +120,7 @@
   <!-- ESTOQUE RESUMO -->
   <div style="margin-top: 8px;">
     <div class="section-title" style="font-size:14px; margin-bottom:14px;">
-      Estoque rápido — Armário TI
+      Estoque rápido — Armário da Impressora
     </div>
     <div style="background:var(--white);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
       <div class="table-scroll">
@@ -167,11 +167,7 @@ async function loadMini() {
     tbody.innerHTML = data.map(row => {
       const cheios = Number(row.cheios) || 0;
       const vazios = Number(row.vazios) || 0;
-      const status = cheios === 0
-        ? `<span style="color:#C0392B;font-weight:600;font-size:12px;">⚠ Sem estoque</span>`
-        : cheios <= 1
-        ? `<span style="color:#E67E22;font-weight:600;font-size:12px;">⚡ Baixo</span>`
-        : `<span style="color:var(--success);font-weight:600;font-size:12px;">✓ Normal</span>`;
+      const status = formatarStatusToner(row, true);
       const cor = (CORES_MAP[row.ref] && CORES_MAP[row.ref].nome) || row.ref;
       return `<tr>
         <td style="font-weight:500;color:var(--ink)">${escapeHtml(cor)}</td>
