@@ -14,6 +14,161 @@
   .cor-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 7px; vertical-align: middle; flex-shrink: 0; }
   .cor-cell { display: flex; align-items: center; }
 
+  /* Editor visual de toners cheios */
+  .cheios-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    padding: 16px 20px;
+  }
+  .cheio-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: border-color 0.15s;
+  }
+  .cheio-card.changed {
+    border-color: var(--shopee);
+  }
+  .cheio-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .cheio-ref {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-soft);
+  }
+  .cheio-ctrl {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .cheio-val {
+    font-family: var(--mono);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--ink);
+    min-width: 28px;
+    text-align: center;
+  }
+  .btn-qty {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--white);
+    color: var(--ink);
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+  }
+  .btn-qty:hover:not(:disabled) {
+    border-color: var(--shopee);
+    color: var(--shopee);
+    background: var(--shopee-light);
+  }
+  .btn-qty:disabled { opacity: 0.4; cursor: not-allowed; }
+  .cheio-delta {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    text-align: center;
+  }
+  .cheio-delta.in  { color: var(--success); }
+  .cheio-delta.out { color: var(--shopee); }
+
+  .editor-footer {
+    padding: 14px 20px;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .editor-bar {
+    display: grid;
+    grid-template-columns: minmax(170px, 1.3fr) auto minmax(180px, 1.5fr) auto;
+    gap: 10px;
+    align-items: end;
+  }
+  .editor-field label {
+    display: block;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    margin-bottom: 5px;
+  }
+  .editor-field .form-input {
+    padding: 7px 10px;
+    font-size: 13px;
+  }
+  .editor-turnos {
+    display: flex;
+    gap: 6px;
+  }
+  .editor-turno-btn {
+    padding: 7px 11px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 12.5px;
+    font-family: var(--mono);
+    font-weight: 600;
+    color: var(--ink-mid);
+    background: var(--white);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .editor-turno-btn.selected {
+    border-color: var(--shopee);
+    background: var(--shopee-light);
+    color: var(--shopee);
+  }
+  .editor-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .editor-feedback {
+    display: none;
+    padding: 9px 12px;
+    border-radius: 6px;
+    font-size: 12.5px;
+    line-height: 1.4;
+  }
+  .editor-feedback.show { display: block; }
+  .editor-feedback.error {
+    background: rgba(192, 57, 43, 0.12);
+    border: 1px solid rgba(192, 57, 43, 0.35);
+    color: #E74C3C;
+  }
+  .editor-feedback.ok {
+    background: var(--success-bg);
+    border: 1px solid rgba(26, 127, 75, 0.35);
+    color: var(--success);
+  }
+  .editor-feedback.warn {
+    background: var(--warning-bg);
+    border: 1px solid rgba(154, 90, 0, 0.35);
+    color: var(--warning);
+  }
+
   /* Log entries */
   .log-table { width: 100%; border-collapse: collapse; }
   .log-table th {
@@ -50,6 +205,15 @@
     line-height: 1.4;
   }
   .form-error.show { display: block; }
+
+  @media (max-width: 900px) {
+    .cheios-grid { grid-template-columns: repeat(2, 1fr); }
+    .editor-bar { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 560px) {
+    .cheios-grid, .editor-bar { grid-template-columns: 1fr; }
+    .panel-footer { flex-direction: column; align-items: flex-start; }
+  }
 </style>
 </head>
 <body>
@@ -106,18 +270,18 @@
   <div class="page-header">
     <div class="page-eyebrow">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-      Acesso restrito · Setor de TI
+      Armário inferior da impressora
     </div>
     <h1 class="page-title">Controle de toners</h1>
-    <p class="page-desc">Estoque do armário inferior da impressora. Registre toda entrada e saída de toners para manter o controle atualizado.</p>
+    <p class="page-desc">Ajuste a quantidade de toners cheios usando − e +, informe seu nome e clique em Salvar para registrar a movimentação.</p>
   </div>
 
-  <!-- TABELA DE ESTOQUE -->
+  <!-- EDITOR VISUAL DE TONERS CHEIOS -->
   <div class="section">
     <div class="toner-panel">
       <div class="panel-head">
         <div>
-          <div class="panel-title">Estoque atual — Armário TI</div>
+          <div class="panel-title">Toners cheios — Armário TI</div>
           <div class="panel-sub" id="last-updated">Carregando...</div>
         </div>
         <button class="btn-refresh" onclick="loadEstoque(true)">
@@ -127,6 +291,52 @@
           </svg>
           Atualizar
         </button>
+      </div>
+
+      <div class="cheios-grid" id="cheios-grid">
+        <div style="grid-column:1/-1;text-align:center;color:var(--ink-soft);padding:24px;">Carregando toners...</div>
+      </div>
+
+      <div class="editor-footer">
+        <div class="editor-bar">
+          <div class="editor-field">
+            <label for="editor-resp">Responsável pela alteração *</label>
+            <input class="form-input" id="editor-resp" type="text" placeholder="Seu nome">
+          </div>
+
+          <div class="editor-field">
+            <label>Turno</label>
+            <div class="editor-turnos" id="editor-turnos">
+              <button type="button" class="editor-turno-btn selected" data-editor-turno="T1" onclick="selectEditorTurno(this)">T1</button>
+              <button type="button" class="editor-turno-btn" data-editor-turno="T2" onclick="selectEditorTurno(this)">T2</button>
+              <button type="button" class="editor-turno-btn" data-editor-turno="T3" onclick="selectEditorTurno(this)">T3</button>
+            </div>
+          </div>
+
+          <div class="editor-field">
+            <label for="editor-obs">Observação <span style="font-weight:400">(opcional)</span></label>
+            <input class="form-input" id="editor-obs" type="text" placeholder="Ex: Troca na impressora, NF 123">
+          </div>
+
+          <div class="editor-actions">
+            <button type="button" class="btn-refresh" id="btn-editor-reset" onclick="desfazerCheios()" disabled>Desfazer</button>
+            <button type="button" class="btn-primary" id="btn-editor-save" onclick="salvarAlteracoesCheios()" disabled>Salvar</button>
+          </div>
+        </div>
+
+        <div class="editor-feedback" id="editor-feedback" role="alert"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABELA RESUMO DE ESTOQUE -->
+  <div class="section">
+    <div class="toner-panel">
+      <div class="panel-head">
+        <div>
+          <div class="panel-title">Resumo completo — Armário TI</div>
+          <div class="panel-sub">Visão consolidada de toners cheios e vazios</div>
+        </div>
       </div>
 
       <table class="toner-table">
@@ -154,9 +364,8 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
           Dados sincronizados com o Google Sheets
         </div>
-        <button class="btn-primary" onclick="abrirModal()">
-          <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-          Registrar movimentação
+        <button class="btn-refresh" onclick="abrirModal()">
+          Movimentação de vazios / manual
         </button>
       </div>
     </div>
@@ -189,11 +398,11 @@
 
 </main>
 
-<!-- MODAL -->
+<!-- MODAL (secundário para vazios/manual) -->
 <div class="modal-overlay" id="modal-overlay">
   <div class="modal">
-    <div class="modal-title">Registrar movimentação</div>
-    <div class="modal-sub">Informe a entrada ou saída de toner do armário.</div>
+    <div class="modal-title">Registrar movimentação manual</div>
+    <div class="modal-sub">Use para registrar entrada ou descarte de toners vazios.</div>
 
     <div class="form-group">
       <label class="form-label">Tipo de toner</label>
@@ -208,10 +417,10 @@
     <div class="form-group">
       <label class="form-label">Tipo de movimentação</label>
       <select class="form-select" id="m-tipo">
-        <option value="entrada_cheio">Entrada — toner cheio no estoque</option>
-        <option value="saida_cheio">Saída — instalando na impressora</option>
         <option value="entrada_vazio">Entrada — toner vazio indo pro armário</option>
         <option value="saida_vazio">Saída — toner vazio (descarte)</option>
+        <option value="entrada_cheio">Entrada — toner cheio no estoque</option>
+        <option value="saida_cheio">Saída — instalando na impressora</option>
       </select>
     </div>
 
@@ -252,8 +461,13 @@
 
 <script src="app.js"></script>
 <script>
+const ESTOQUE_DRAFT_KEY = "tiEstoqueCheiosDraft";
 let turnoSelecionado = "T1";
+let editorTurno = "T1";
+let isEditorSaving = false;
 let tonerData = [];
+let cheiosOriginal = { W2150XC: 0, W2151XC: 0, W2152XC: 0, W2153XC: 0 };
+let cheiosDraft    = { W2150XC: 0, W2151XC: 0, W2152XC: 0, W2153XC: 0 };
 
 function selectTurno(btn) {
   document.querySelectorAll(".turno-btn").forEach(b => b.classList.remove("selected"));
@@ -261,17 +475,295 @@ function selectTurno(btn) {
   turnoSelecionado = btn.dataset.turno;
 }
 
+function selectEditorTurno(btn) {
+  if (isEditorSaving) return;
+  document.querySelectorAll(".editor-turno-btn").forEach(b => b.classList.remove("selected"));
+  btn.classList.add("selected");
+  editorTurno = btn.dataset.editorTurno;
+  saveEditorDraft(false);
+}
+
+function setEditorFeedback(type, msg = "") {
+  const el = document.getElementById("editor-feedback");
+  el.textContent = msg;
+  el.className = msg ? `editor-feedback show ${type}` : "editor-feedback";
+}
+
+function saveEditorDraft(saving = false) {
+  const deltas = {};
+  let hasDelta = false;
+  Object.keys(CORES_MAP).forEach(ref => {
+    const d = (Number(cheiosDraft[ref]) || 0) - (Number(cheiosOriginal[ref]) || 0);
+    if (d !== 0) {
+      deltas[ref] = d;
+      hasDelta = true;
+    }
+  });
+  const resp = document.getElementById("editor-resp").value;
+  const obs  = document.getElementById("editor-obs").value;
+  if (!hasDelta && !resp.trim() && !obs.trim()) {
+    localStorage.removeItem(ESTOQUE_DRAFT_KEY);
+    return;
+  }
+  localStorage.setItem(ESTOQUE_DRAFT_KEY, JSON.stringify({
+    deltas,
+    resp,
+    obs,
+    turno: editorTurno,
+    saving,
+    updatedAt: Date.now()
+  }));
+}
+
+function loadEditorDraft() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(ESTOQUE_DRAFT_KEY) || "null");
+    if (!raw || !raw.updatedAt || Date.now() - raw.updatedAt > 24 * 60 * 60 * 1000) {
+      localStorage.removeItem(ESTOQUE_DRAFT_KEY);
+      return null;
+    }
+    return raw;
+  } catch {
+    localStorage.removeItem(ESTOQUE_DRAFT_KEY);
+    return null;
+  }
+}
+
+function clearEditorDraft() {
+  localStorage.removeItem(ESTOQUE_DRAFT_KEY);
+}
+
+function setEditorInputsDisabled(disabled) {
+  document.getElementById("editor-resp").disabled = disabled;
+  document.getElementById("editor-obs").disabled = disabled;
+  document.querySelectorAll(".editor-turno-btn").forEach(b => { b.disabled = disabled; });
+}
+
+function getMovimentosPendentesEditor() {
+  const movimentos = [];
+  Object.keys(CORES_MAP).forEach(ref => {
+    const orig = Number(cheiosOriginal[ref]) || 0;
+    const atual = Number(cheiosDraft[ref]) || 0;
+    const delta = atual - orig;
+    if (delta !== 0) {
+      movimentos.push({
+        modelo: ref,
+        tipo: delta > 0 ? "entrada_cheio" : "saida_cheio",
+        qtd: Math.abs(delta)
+      });
+    }
+  });
+  return movimentos;
+}
+
+function renderCheiosEditor() {
+  const grid = document.getElementById("cheios-grid");
+  grid.innerHTML = Object.entries(CORES_MAP).map(([ref, info]) => {
+    const orig = Number(cheiosOriginal[ref]) || 0;
+    const qtd  = Math.max(0, Number(cheiosDraft[ref]) || 0);
+    const delta = qtd - orig;
+    const deltaText = delta > 0
+      ? `+${delta} entrada`
+      : delta < 0
+      ? `−${Math.abs(delta)} saída`
+      : `Atual: ${orig}`;
+    const deltaClass = delta > 0 ? " in" : delta < 0 ? " out" : "";
+    const decDisabled = isEditorSaving || qtd === 0 ? "disabled" : "";
+    const incDisabled = isEditorSaving ? "disabled" : "";
+    return `<div class="cheio-card${delta !== 0 ? " changed" : ""}">
+      <div class="cheio-head">
+        <div class="cor-cell">
+          <span class="cor-dot" style="background:${info.cor}"></span>
+          <span style="font-weight:600;color:var(--ink);font-size:13.5px;">${escapeHtml(info.nome)}</span>
+        </div>
+        <span class="cheio-ref">${escapeHtml(ref)}</span>
+      </div>
+      <div class="cheio-ctrl">
+        <button type="button" class="btn-qty" data-cheio-ref="${escapeHtml(ref)}" data-delta="-1" ${decDisabled} aria-label="Diminuir ${escapeHtml(info.nome)}">−</button>
+        <span class="cheio-val">${qtd}</span>
+        <button type="button" class="btn-qty" data-cheio-ref="${escapeHtml(ref)}" data-delta="1" ${incDisabled} aria-label="Aumentar ${escapeHtml(info.nome)}">+</button>
+      </div>
+      <div class="cheio-delta${deltaClass}">${escapeHtml(deltaText)}</div>
+    </div>`;
+  }).join("");
+
+  const temAlteracao = getMovimentosPendentesEditor().length > 0;
+  document.getElementById("btn-editor-save").disabled = isEditorSaving || !temAlteracao;
+  document.getElementById("btn-editor-reset").disabled = isEditorSaving || !temAlteracao;
+}
+
+function alterarCheioDraft(ref, delta) {
+  if (isEditorSaving || !(ref in cheiosDraft)) return;
+  const atual = Number(cheiosDraft[ref]) || 0;
+  const orig  = Number(cheiosOriginal[ref]) || 0;
+  const proximo = Math.max(0, atual + delta);
+  if (Math.abs(proximo - orig) > 20) {
+    setEditorFeedback("error", "Alteração máxima de 20 unidades por cor em um mesmo envio.");
+    return;
+  }
+  setEditorFeedback("", "");
+  cheiosDraft[ref] = proximo;
+  saveEditorDraft(false);
+  renderCheiosEditor();
+}
+
+function desfazerCheios() {
+  if (isEditorSaving) return;
+  cheiosDraft = { ...cheiosOriginal };
+  clearEditorDraft();
+  setEditorFeedback("", "");
+  renderCheiosEditor();
+}
+
+document.getElementById("cheios-grid").addEventListener("click", e => {
+  const btn = e.target.closest("button[data-cheio-ref][data-delta]");
+  if (!btn) return;
+  alterarCheioDraft(btn.dataset.cheioRef, Number(btn.dataset.delta) || 0);
+});
+
+document.getElementById("editor-resp").addEventListener("input", () => saveEditorDraft(false));
+document.getElementById("editor-obs").addEventListener("input", () => saveEditorDraft(false));
+
+window.addEventListener("beforeunload", e => {
+  if (isEditorSaving || getMovimentosPendentesEditor().length > 0) {
+    e.preventDefault();
+    e.returnValue = "";
+  }
+});
+
+function aplicarEstoqueNaTela(data) {
+  tonerData = data;
+  sessionStorage.setItem("tonerData", JSON.stringify(data));
+  const next = { W2150XC: 0, W2151XC: 0, W2152XC: 0, W2153XC: 0 };
+  data.forEach(row => {
+    if (row && row.ref in next) {
+      next[row.ref] = Math.max(0, Math.floor(Number(row.cheios) || 0));
+    }
+  });
+  cheiosOriginal = next;
+  cheiosDraft    = { ...next };
+
+  const draft = loadEditorDraft();
+  if (draft && draft.deltas && Object.keys(draft.deltas).length > 0) {
+    Object.keys(draft.deltas).forEach(ref => {
+      if (ref in cheiosDraft) {
+        cheiosDraft[ref] = Math.max(0, cheiosOriginal[ref] + (Number(draft.deltas[ref]) || 0));
+      }
+    });
+    if (typeof draft.resp === "string") document.getElementById("editor-resp").value = draft.resp;
+    if (typeof draft.obs === "string") document.getElementById("editor-obs").value = draft.obs;
+    if (draft.turno) {
+      editorTurno = draft.turno;
+      document.querySelectorAll(".editor-turno-btn").forEach(b => {
+        b.classList.toggle("selected", b.dataset.editorTurno === editorTurno);
+      });
+    }
+    setEditorFeedback(
+      "warn",
+      draft.saving
+        ? "Sua última gravação foi interrompida antes da confirmação. Confira o Histórico recente abaixo antes de salvar novamente."
+        : "Alterações não salvas foram recuperadas — clique em Salvar para enviar à planilha."
+    );
+  }
+
+  renderCheiosEditor();
+  renderEstoque(data);
+}
+
+async function salvarAlteracoesCheios() {
+  if (isEditorSaving) return;
+  const movimentos = getMovimentosPendentesEditor();
+  if (!movimentos.length) {
+    setEditorFeedback("error", "Altere a quantidade de pelo menos um toner antes de salvar.");
+    return;
+  }
+
+  const respEl = document.getElementById("editor-resp");
+  const obsEl  = document.getElementById("editor-obs");
+  const resp   = respEl.value.trim();
+  const obs    = obsEl.value.trim();
+
+  respEl.style.borderColor = "";
+  setEditorFeedback("", "");
+
+  if (!resp) {
+    respEl.style.borderColor = "var(--shopee)";
+    respEl.focus();
+    setEditorFeedback("error", "Informe seu nome no campo Responsável antes de salvar.");
+    return;
+  }
+
+  const btnSave = document.getElementById("btn-editor-save");
+  isEditorSaving = true;
+  saveEditorDraft(true);
+  btnSave.textContent = "Sincronizando...";
+  setEditorInputsDisabled(true);
+  renderCheiosEditor();
+  setEditorFeedback("warn", "Sincronizando com a planilha... Não feche ou saia desta página até concluir.");
+
+  try {
+    const agora = new Date().toISOString();
+    const res = movimentos.length === 1
+      ? await apiPost({
+          action: "registrar",
+          modelo: movimentos[0].modelo,
+          tipo: movimentos[0].tipo,
+          qtd: movimentos[0].qtd,
+          resp,
+          obs,
+          turno: editorTurno,
+          data: agora
+        })
+      : await apiPost({
+          action: "registrarLote",
+          movimentos,
+          resp,
+          obs,
+          turno: editorTurno,
+          data: agora
+        });
+
+    clearEditorDraft();
+    respEl.value = "";
+    obsEl.value = "";
+    document.querySelectorAll(".editor-turno-btn").forEach((b, i) => b.classList.toggle("selected", i === 0));
+    editorTurno = "T1";
+    isEditorSaving = false;
+    setEditorInputsDisabled(false);
+
+    if (Array.isArray(res?.estoque)) {
+      aplicarEstoqueNaTela(res.estoque);
+      loadTonerPill();
+      renderLog();
+    } else {
+      await loadEstoque(true);
+      await loadTonerPill();
+    }
+
+    setEditorFeedback("ok", "Movimentação salva na planilha! O administrador recebeu um e-mail para validação.");
+  } catch (err) {
+    isEditorSaving = false;
+    saveEditorDraft(false);
+    setEditorInputsDisabled(false);
+    renderCheiosEditor();
+    setEditorFeedback("error", err?.message || "Erro ao salvar. Suas alterações continuam salvas aqui — tente novamente.");
+  } finally {
+    btnSave.textContent = "Salvar";
+  }
+}
+
 /* ── ESTOQUE ── */
 async function loadEstoque(force = false) {
   const icon = document.getElementById("refresh-icon");
   icon.classList.add("spinning");
-  if (force) sessionStorage.removeItem("tonerData");
 
   try {
-    tonerData = await fetchTonerData();
-    renderEstoque(tonerData);
+    const data = await fetchTonerData(force);
+    aplicarEstoqueNaTela(data);
     renderLog();
   } catch {
+    document.getElementById("cheios-grid").innerHTML =
+      `<div style="grid-column:1/-1;text-align:center;color:var(--ink-soft);padding:24px;">Erro ao carregar toners. Verifique a conexão.</div>`;
     document.getElementById("estoque-tbody").innerHTML =
       `<tr><td colspan="5" style="text-align:center;color:var(--ink-soft);padding:24px;">Erro ao carregar. Verifique a conexão.</td></tr>`;
   }
@@ -406,15 +898,23 @@ async function submeterMovimentacao() {
     setModalError("Informe o nome do responsável.");
     return;
   }
+
   const btn = document.getElementById("btn-submit");
   btn.textContent = "Registrando...";
   btn.disabled = true;
 
   try {
     const payload = { action: "registrar", modelo, tipo, qtd, resp, obs, turno, data: new Date().toISOString() };
-    await apiPost(payload);
-    sessionStorage.removeItem("tonerData");
-    await loadEstoque(true);
+    const res = await apiPost(payload);
+    if (Array.isArray(res?.estoque)) {
+      aplicarEstoqueNaTela(res.estoque);
+      loadTonerPill();
+      renderLog();
+    } else {
+      sessionStorage.removeItem("tonerData");
+      await loadEstoque(true);
+      await loadTonerPill();
+    }
     fecharModal();
   } catch (err) {
     setModalError(err?.message || "Erro ao registrar. Verifique a conexão com o Apps Script.");
