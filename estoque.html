@@ -169,16 +169,71 @@
     color: var(--warning);
   }
 
-  /* Log entries */
-  .log-table { width: 100%; border-collapse: collapse; }
-  .log-table th {
-    text-align: left; padding: 9px 16px; font-size: 11px; font-weight: 600;
-    text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-soft);
-    background: var(--surface); border-bottom: 1px solid var(--border);
+  .log-sessions { display: flex; flex-direction: column; }
+  .log-session {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
   }
-  .log-table td { padding: 11px 16px; font-size: 13px; border-bottom: 1px solid var(--border); color: var(--ink-mid); }
-  .log-table tr:last-child td { border-bottom: none; }
-  .log-table tr:hover td { background: var(--surface); }
+  .log-session:last-child { border-bottom: none; }
+  .log-session-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+  .log-session-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .log-session-date {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
+  .log-session-resp {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .log-session-count {
+    font-size: 11.5px;
+    font-family: var(--mono);
+    color: var(--ink-soft);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 2px 9px;
+  }
+  .log-session-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .log-session-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 7px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    font-size: 12.5px;
+    color: var(--ink-mid);
+  }
+  .log-session-qtd {
+    font-family: var(--mono);
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .log-session-obs {
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
 
   .tag { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 100px; }
   .tag-in  { background: var(--success-bg); color: var(--success); }
@@ -407,22 +462,8 @@
       <span style="font-size:12px;color:var(--ink-soft)" id="log-count">—</span>
     </div>
     <div class="toner-panel">
-      <div class="table-scroll">
-      <table class="log-table">
-        <thead>
-          <tr>
-            <th>Data / Hora</th>
-            <th>Toner</th>
-            <th>Movimentação</th>
-            <th>Qtd</th>
-            <th>Turno</th>
-            <th>Responsável</th>
-          </tr>
-        </thead>
-        <tbody id="log-tbody">
-          <tr><td colspan="6" style="text-align:center;color:var(--ink-soft);padding:20px;">Carregando histórico...</td></tr>
-        </tbody>
-      </table>
+      <div class="log-sessions" id="log-tbody">
+        <div style="text-align:center;color:var(--ink-soft);padding:20px;font-size:13px;">Carregando histórico...</div>
       </div>
     </div>
   </div>
@@ -852,42 +893,97 @@ function renderEstoque(data) {
   document.getElementById("last-updated").textContent = `Última sincronização: ${up}`;
 }
 
-/* ── LOG ── */
+/* ── LOG (5 sessões mais recentes agrupadas) ── */
+function agruparLogsPorSessao(log) {
+  const JANELA_MS = 2 * 60 * 1000;
+  const sessoes = [];
+
+  log.forEach(r => {
+    const resp  = String(r?.resp || "—").trim() || "—";
+    const turno = String(r?.turno || "—").trim() || "—";
+    const obs   = String(r?.obs || "").trim();
+    const ts    = r?.data ? new Date(r.data).getTime() : NaN;
+    const prev  = sessoes[sessoes.length - 1];
+
+    const mesmaSessao = prev
+      && prev.resp.toLowerCase() === resp.toLowerCase()
+      && prev.turno === turno
+      && prev.obs === obs
+      && (
+        (!Number.isNaN(ts) && !Number.isNaN(prev.ts) && Math.abs(prev.ts - ts) <= JANELA_MS)
+        || (String(r?.data || "") === String(prev.dataRaw || ""))
+      );
+
+    if (mesmaSessao) {
+      prev.itens.push(r);
+    } else {
+      sessoes.push({
+        dataRaw: r?.data || "",
+        ts,
+        resp,
+        turno,
+        obs,
+        itens: [r]
+      });
+    }
+  });
+
+  return sessoes;
+}
+
 async function renderLog() {
-  const tbody = document.getElementById("log-tbody");
+  const container = document.getElementById("log-tbody");
   try {
     const log = await apiGet("getLog");
     if (!Array.isArray(log)) throw new Error("Histórico inválido");
 
     if (!log.length) {
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--ink-soft);padding:20px;">Nenhuma movimentação registrada.</td></tr>`;
-      document.getElementById("log-count").textContent = "0 registros";
+      container.innerHTML = `<div style="text-align:center;color:var(--ink-soft);padding:20px;font-size:13px;">Nenhuma movimentação registrada.</div>`;
+      document.getElementById("log-count").textContent = "0 sessões";
       return;
     }
 
-    document.getElementById("log-count").textContent = `${log.length} registro${log.length !== 1 ? "s" : ""}`;
-    tbody.innerHTML = log.slice(0, 30).map(r => {
-      const info  = CORES_MAP[r.modelo] || { nome: r.modelo, cor: "#888" };
-      const isIn  = r.tipo?.startsWith("entrada");
-      const data  = r.data ? new Date(r.data).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}) : "—";
-      const turno = r.turno || "—";
-      const turnoClass = turno === "T1" ? "turno-t1" : turno === "T2" ? "turno-t2" : "turno-t3";
-      return `<tr>
-        <td style="font-family:var(--mono);font-size:12px;">${data}</td>
-        <td>
-          <div class="cor-cell">
-            <span class="cor-dot" style="background:${info.cor}"></span>
-            ${escapeHtml(info.nome)}
+    const todasSessoes = agruparLogsPorSessao(log);
+    const recentes = todasSessoes.slice(0, 5);
+    document.getElementById("log-count").textContent =
+      `Últimas ${recentes.length} ${recentes.length === 1 ? "sessão" : "sessões"} (${log.length} registro${log.length !== 1 ? "s" : ""})`;
+
+    container.innerHTML = recentes.map(s => {
+      const dataStr = s.dataRaw
+        ? new Date(s.dataRaw).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
+        : "—";
+      const turnoClass = s.turno === "T1" ? "turno-t1" : s.turno === "T2" ? "turno-t2" : "turno-t3";
+      const turnoBadge = s.turno !== "—"
+        ? `<span class="turno-label ${turnoClass}">${escapeHtml(s.turno)}</span>`
+        : "";
+      const qtdItens = s.itens.length;
+      const itensHtml = s.itens.map(r => {
+        const info = CORES_MAP[r.modelo] || { nome: r.modelo, cor: "#888" };
+        const isIn = r.tipo?.startsWith("entrada");
+        return `<div class="log-session-item">
+          <span class="cor-dot" style="background:${info.cor};margin-right:0;"></span>
+          <strong style="color:var(--ink);font-weight:600;">${escapeHtml(info.nome)}</strong>
+          <span class="tag ${isIn ? "tag-in" : "tag-out"}">${escapeHtml(TIPO_LABEL[r.tipo] || r.tipo)}</span>
+          <span class="log-session-qtd">${isIn ? "+" : "−"}${Number(r.qtd) || 1}</span>
+        </div>`;
+      }).join("");
+      const obsHtml = s.obs ? `<div class="log-session-obs">Obs: ${escapeHtml(s.obs)}</div>` : "";
+
+      return `<div class="log-session">
+        <div class="log-session-head">
+          <div class="log-session-meta">
+            <span class="log-session-date">${escapeHtml(dataStr)}</span>
+            <span class="log-session-resp">${escapeHtml(s.resp)}</span>
+            ${turnoBadge}
           </div>
-        </td>
-        <td><span class="tag ${isIn ? "tag-in" : "tag-out"}">${escapeHtml(TIPO_LABEL[r.tipo] || r.tipo)}</span></td>
-        <td style="font-family:var(--mono)">${Number(r.qtd) || 1}</td>
-        <td>${turno !== "—" ? `<span class="turno-label ${turnoClass}">${escapeHtml(turno)}</span>` : "—"}</td>
-        <td>${escapeHtml(r.resp || "—")}</td>
-      </tr>`;
+          <span class="log-session-count">${qtdItens} ${qtdItens === 1 ? "movimentação" : "movimentações"}</span>
+        </div>
+        <div class="log-session-items">${itensHtml}</div>
+        ${obsHtml}
+      </div>`;
     }).join("");
   } catch {
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--ink-soft);padding:16px;">Histórico indisponível.</td></tr>`;
+    container.innerHTML = `<div style="text-align:center;color:var(--ink-soft);padding:16px;font-size:13px;">Histórico indisponível.</div>`;
   }
 }
 
