@@ -14,7 +14,7 @@
   .btn-dl.secondary { background: var(--white); color: var(--ink-mid); border: 1px solid var(--border); }
   .btn-dl.secondary:hover { background: var(--surface); border-color: var(--shopee); color: var(--shopee); }
   .pdf-mobile-wrap {
-    max-height: 72vh;
+    max-height: 75vh;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     padding: 12px;
@@ -24,6 +24,7 @@
     gap: 12px;
   }
   .pdf-page-card {
+    flex-shrink: 0;
     background: #FFFFFF;
     border-radius: 6px;
     overflow: hidden;
@@ -266,6 +267,7 @@
         const canvas = document.createElement("canvas");
         canvas.width = Math.floor(viewport.width);
         canvas.height = Math.floor(viewport.height);
+        canvas.style.aspectRatio = `${viewport.width} / ${viewport.height}`;
 
         const label = document.createElement("div");
         label.className = "pdf-page-num";
