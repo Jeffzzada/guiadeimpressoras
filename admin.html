@@ -351,10 +351,22 @@
     .kpi-grid, .vazios-ti-grid { grid-template-columns: repeat(2, 1fr); }
   }
 
+  @media (max-width: 760px) {
+    .admin-user-bar .admin-actions { width: 100%; justify-content: space-between; }
+    .panel-head .admin-actions { width: 100%; justify-content: flex-end; }
+    .bulk-actions { width: 100%; }
+    .search-input { min-width: 0; width: 100%; flex: 1 1 100%; }
+    #btn-validar-todas, #btn-divergir-todas { flex: 1; justify-content: center; min-height: 36px; }
+    .btn-val { padding: 7px 11px; min-height: 34px; }
+    .btn-qty { width: 38px; height: 38px; }
+    .val-table th, .val-table td { padding: 10px 12px; font-size: 12.5px; white-space: nowrap; }
+    .vazios-ti-grid { padding: 14px; }
+  }
+
   @media (max-width: 700px) {
     .kpi-grid, .vazios-ti-grid { grid-template-columns: 1fr; }
     .admin-user-bar { flex-direction: column; align-items: flex-start; }
-    .val-table { display: block; overflow-x: auto; }
+
   }
 </style>
 </head>
@@ -502,6 +514,7 @@
         </div>
       </div>
 
+      <div class="table-scroll">
       <table class="val-table">
         <thead>
           <tr>
@@ -518,6 +531,7 @@
           <tr><td colspan="7" style="text-align:center;color:var(--ink-soft);padding:24px;">Carregando registros...</td></tr>
         </tbody>
       </table>
+      </div>
     </div>
   </div>
 </main>

@@ -193,6 +193,11 @@
     padding: 3px 8px;
     border-radius: 100px;
   }
+  @media (max-width: 480px) {
+    .auth-shell { padding: 20px 14px 48px; }
+    .auth-card { padding: 24px 18px; }
+    .auth-meta { flex-wrap: wrap; gap: 8px; }
+  }
 </style>
 </head>
 <body>
@@ -352,7 +357,7 @@
       text: "signin_with",
       shape: "rectangular",
       logo_alignment: "left",
-      width: 320
+      width: Math.min(320, Math.max(220, btnWrap.clientWidth || 280))
     });
   }
 

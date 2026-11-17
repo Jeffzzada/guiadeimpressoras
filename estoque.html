@@ -209,9 +209,20 @@
   @media (max-width: 900px) {
     .cheios-grid { grid-template-columns: repeat(2, 1fr); }
     .editor-bar { grid-template-columns: 1fr 1fr; }
+    .editor-actions { grid-column: 1 / -1; justify-content: flex-end; }
+  }
+  @media (max-width: 760px) {
+    .log-table th, .log-table td { padding: 10px 12px; font-size: 12.5px; white-space: nowrap; }
+    .btn-qty { width: 38px; height: 38px; }
   }
   @media (max-width: 560px) {
     .cheios-grid, .editor-bar { grid-template-columns: 1fr; }
+    .cheios-grid { padding: 14px; }
+    .editor-footer { padding: 14px; }
+    .editor-turnos { width: 100%; }
+    .editor-turno-btn { flex: 1; text-align: center; padding: 9px 10px; }
+    .editor-actions { width: 100%; }
+    .editor-actions button { flex: 1; justify-content: center; min-height: 40px; }
     .panel-footer { flex-direction: column; align-items: flex-start; }
   }
 </style>
@@ -339,6 +350,7 @@
         </div>
       </div>
 
+      <div class="table-scroll">
       <table class="toner-table">
         <thead>
           <tr>
@@ -358,6 +370,7 @@
           </td></tr>
         </tbody>
       </table>
+      </div>
 
       <div class="panel-footer">
         <div class="footer-note">
@@ -378,6 +391,7 @@
       <span style="font-size:12px;color:var(--ink-soft)" id="log-count">—</span>
     </div>
     <div class="toner-panel">
+      <div class="table-scroll">
       <table class="log-table">
         <thead>
           <tr>
@@ -393,6 +407,7 @@
           <tr><td colspan="6" style="text-align:center;color:var(--ink-soft);padding:20px;">Carregando histórico...</td></tr>
         </tbody>
       </table>
+      </div>
     </div>
   </div>
 

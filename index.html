@@ -123,7 +123,8 @@
       Estoque rápido — Armário TI
     </div>
     <div style="background:var(--white);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
-      <table class="toner-table">
+      <div class="table-scroll">
+        <table class="toner-table">
         <thead>
           <tr>
             <th>Cor</th>
@@ -142,7 +143,8 @@
           </td></tr>
         </tbody>
       </table>
-      <div style="padding:10px 20px;background:var(--surface);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+      </div>
+      <div style="padding:10px 20px;background:var(--surface);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
         <span style="font-size:12px;color:var(--ink-soft)" id="mini-updated">—</span>
         <a href="estoque.html" style="font-size:12.5px;color:var(--shopee);font-weight:500;text-decoration:none;display:flex;align-items:center;gap:5px;">
           Gerenciar estoque

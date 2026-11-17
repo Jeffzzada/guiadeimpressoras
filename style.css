@@ -58,7 +58,8 @@ body {
 .brand-name { font-size: 14px; font-weight: 700; color: var(--ink); letter-spacing: -0.01em; }
 .brand-device { font-size: 11.5px; color: var(--ink-soft); font-weight: 400; margin-top: 1px; }
 
-.nav-tabs { display: flex; align-items: stretch; flex: 1; gap: 0; }
+.nav-tabs { display: flex; align-items: stretch; flex: 1; min-width: 0; gap: 0; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.nav-tabs::-webkit-scrollbar { display: none; }
 .nav-tab {
   display: flex; align-items: center; gap: 7px;
   padding: 0 16px; font-size: 13px; font-weight: 500;
@@ -154,7 +155,7 @@ code {
   border-radius: var(--radius); overflow: hidden; margin-bottom: 24px;
 }
 .media-toolbar {
-  display: flex; align-items: center; justify-content: space-between;
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
   padding: 10px 16px; background: var(--surface-2); border-bottom: 1px solid var(--border);
 }
 .media-label { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; color: var(--ink-mid); }
@@ -226,7 +227,7 @@ video.player, iframe.player {
 /* ── TONER PANEL ── */
 .toner-panel { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
 .panel-head {
-  display: flex; align-items: center; justify-content: space-between;
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
   padding: 16px 20px; border-bottom: 1px solid var(--border);
 }
 .panel-title { font-size: 15px; font-weight: 600; color: var(--ink); }
@@ -241,6 +242,7 @@ video.player, iframe.player {
 .btn-refresh:hover { background: var(--surface-2); border-color: var(--shopee); }
 .btn-refresh svg { width: 13px; height: 13px; }
 
+.table-scroll { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .toner-table { width: 100%; border-collapse: collapse; }
 .toner-table th {
   text-align: left; padding: 10px 20px; font-size: 11px; font-weight: 600;
@@ -258,7 +260,7 @@ video.player, iframe.player {
 .badge-full::before, .badge-empty::before { content:'●'; font-size:8px; }
 
 .panel-footer {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
   padding: 12px 20px; background: var(--surface); border-top: 1px solid var(--border);
 }
 .footer-note { font-size: 12px; color: var(--ink-soft); display: flex; align-items: center; gap: 6px; }
@@ -281,7 +283,7 @@ video.player, iframe.player {
 .modal-overlay.open { display: flex; }
 .modal {
   background: var(--white); border-radius: 12px; padding: 28px;
-  width: 460px; max-width: 92vw; box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  width: 460px; max-width: 92vw; max-height: 90dvh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.2);
 }
 .modal-title { font-size: 17px; font-weight: 700; color: var(--ink); margin-bottom: 5px; }
 .modal-sub   { font-size: 13px; color: var(--ink-soft); margin-bottom: 20px; }
@@ -325,12 +327,22 @@ video.player, iframe.player {
 .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
 
 /* ── RESPONSIVE ── */
-@media (max-width: 700px) {
-  .topnav { padding: 0 16px; }
-  .nav-tabs { overflow-x: auto; }
-  .nav-tab { padding: 0 12px; font-size: 12.5px; }
-  .nav-end { display: none; }
-  .page { padding: 28px 16px 60px; }
+@media (max-width: 760px) {
+  .topnav { height: auto; flex-wrap: wrap; padding: 0; }
+  .topnav-brand { padding: 10px 14px; margin-right: 0; }
+  .nav-end { padding: 8px 14px 8px 0; gap: 6px; }
+  .nav-end #toner-pill { display: none; }
+  .toner-pill { padding: 5px 10px; font-size: 11.5px; white-space: nowrap; }
+  .nav-tabs { order: 3; flex: 0 0 100%; width: 100%; border-top: 1px solid var(--border); padding: 0 8px; }
+  .nav-tab { padding: 10px 12px; font-size: 12.5px; }
+  .page { padding: 24px 14px 60px; }
+  .page-title { font-size: 21px; }
+  .step { padding: 14px; gap: 12px; }
+  .panel-head { padding: 14px 16px; }
+  .toner-table th, .toner-table td { padding: 11px 12px; font-size: 12.5px; white-space: nowrap; }
+  .modal { padding: 20px 18px; }
+  .form-input, .form-select, input[type="search"], input[type="text"], input[type="number"] { font-size: 16px; }
+  embed[type="application/pdf"] { height: 380px !important; }
   .scan-grid { grid-template-columns: 1fr; }
   .index-grid { grid-template-columns: 1fr; }
 }

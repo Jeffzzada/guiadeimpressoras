@@ -9,6 +9,50 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+<style>
+  .media-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .btn-dl.secondary { background: var(--white); color: var(--ink-mid); border: 1px solid var(--border); }
+  .btn-dl.secondary:hover { background: var(--surface); border-color: var(--shopee); color: var(--shopee); }
+  .pdf-mobile-wrap {
+    max-height: 72vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 12px;
+    background: #1A1A1A;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .pdf-page-card {
+    background: #FFFFFF;
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+  }
+  .pdf-page-card canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  .pdf-page-num {
+    background: #242424;
+    color: #BBB;
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 5px 10px;
+    text-align: right;
+  }
+  .pdf-status {
+    padding: 40px 20px;
+    text-align: center;
+    color: #BBB;
+    font-size: 13.5px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+</style>
 </head>
 <body>
 
@@ -82,19 +126,22 @@
           Manual de primeira conexão — HP Color LaserJet MFP
         </div>
         <!-- Ajuste o href para o caminho real do PDF -->
-        <a class="btn-dl" href="assets/Guia rápido –  Conexão da máquina com a impressora 4303FDW.pdf" download>
-          <svg viewBox="0 0 24 24"><path d="M12 16l-4-4h3V4h2v8h3l-4 4zM4 20h16v-2H4v2z"/></svg>
-          Baixar PDF
-        </a>
-      </div>
-      <div class="media-dark">
-        <!-- Descomente e ajuste o src quando tiver o arquivo: -->
-        <embed src="assets/Guia rápido –  Conexão da máquina com a impressora 4303FDW.pdf" type="application/pdf" width="100%" height="560" style="display:block">
-        <!-- <div class="placeholder-dark">
-          <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-          <p>Coloque o arquivo PDF em <strong>assets/manual-conexao.pdf</strong> e descomente a tag &lt;embed&gt; no código.</p>
-          <div class="hint">assets/manual-conexao.pdf</div> -->
+        <div class="media-actions">
+          <a class="btn-dl secondary" id="btn-pdf-open" href="assets/Guia rápido –  Conexão da máquina com a impressora 4303FDW.pdf" target="_blank" rel="noopener">
+            Abrir PDF
+          </a>
+          <a class="btn-dl" id="btn-pdf-dl" href="assets/Guia rápido –  Conexão da máquina com a impressora 4303FDW.pdf" download>
+            <svg viewBox="0 0 24 24"><path d="M12 16l-4-4h3V4h2v8h3l-4 4zM4 20h16v-2H4v2z"/></svg>
+            Baixar PDF
+          </a>
         </div>
+      </div>
+      <div class="media-dark" id="pdf-viewer">
+        <noscript>
+          <div class="pdf-status">
+            <p>Ative o JavaScript ou baixe o manual PDF pelo botão acima.</p>
+          </div>
+        </noscript>
       </div>
     </div>
   </div>
@@ -149,5 +196,92 @@
 </main>
 
 <script src="app.js"></script>
+<script>
+(function initPdfViewer() {
+  const PDF_URL = encodeURI("assets/Guia rápido –  Conexão da máquina com a impressora 4303FDW.pdf");
+  const PDFJS_CDN = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174";
+  const container = document.getElementById("pdf-viewer");
+  if (!container) return;
+
+  const isMobileDevice = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+  const supportsInlinePdf = navigator.pdfViewerEnabled !== false && window.matchMedia("(min-width: 761px)").matches && !isMobileDevice;
+
+  if (supportsInlinePdf) {
+    const embed = document.createElement("embed");
+    embed.src = PDF_URL;
+    embed.type = "application/pdf";
+    embed.width = "100%";
+    embed.height = "560";
+    embed.style.display = "block";
+    container.appendChild(embed);
+    return;
+  }
+
+  function showFallback(msg) {
+    container.innerHTML = `<div class="pdf-status">
+      <p>${escapeHtml(msg)}</p>
+      <div class="media-actions" style="justify-content:center;">
+        <a class="btn-dl" href="${PDF_URL}" target="_blank" rel="noopener">Abrir PDF</a>
+        <a class="btn-dl secondary" href="${PDF_URL}" download>Baixar PDF</a>
+      </div>
+    </div>`;
+  }
+
+  function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = src;
+      s.onload = resolve;
+      s.onerror = () => reject(new Error("Falha ao carregar visualizador PDF"));
+      document.head.appendChild(s);
+    });
+  }
+
+  container.innerHTML = `<div class="pdf-status"><p>Carregando manual em PDF...</p></div>`;
+
+  loadScript(`${PDFJS_CDN}/pdf.min.js`)
+    .then(async () => {
+      const pdfjsLib = window.pdfjsLib;
+      if (!pdfjsLib) throw new Error("PDF.js indisponível");
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `${PDFJS_CDN}/pdf.worker.min.js`;
+
+      const pdf = await pdfjsLib.getDocument(PDF_URL).promise;
+      const wrap = document.createElement("div");
+      wrap.className = "pdf-mobile-wrap";
+      container.innerHTML = "";
+      container.appendChild(wrap);
+
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const targetWidth = Math.max(260, (wrap.clientWidth || window.innerWidth - 48) - 24);
+
+      for (let num = 1; num <= pdf.numPages; num++) {
+        const page = await pdf.getPage(num);
+        const baseViewport = page.getViewport({ scale: 1 });
+        const scale = (targetWidth / baseViewport.width) * dpr;
+        const viewport = page.getViewport({ scale });
+
+        const card = document.createElement("div");
+        card.className = "pdf-page-card";
+
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.floor(viewport.width);
+        canvas.height = Math.floor(viewport.height);
+
+        const label = document.createElement("div");
+        label.className = "pdf-page-num";
+        label.textContent = `Página ${num} de ${pdf.numPages}`;
+
+        card.appendChild(canvas);
+        card.appendChild(label);
+        wrap.appendChild(card);
+
+        await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
+      }
+    })
+    .catch(() => {
+      showFallback("Não foi possível exibir o PDF diretamente neste navegador.");
+    });
+})();
+</script>
 </body>
 </html>
