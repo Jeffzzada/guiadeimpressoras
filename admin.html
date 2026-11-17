@@ -345,6 +345,7 @@
     color: #FFFFFF;
   }
   .btn-danger-outline:disabled { opacity: 0.55; cursor: not-allowed; }
+  .bulk-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
   @media (max-width: 900px) {
     .kpi-grid, .vazios-ti-grid { grid-template-columns: repeat(2, 1fr); }
@@ -494,7 +495,11 @@
           <button type="button" class="filter-tab" data-filter="validado" onclick="setFilter(this)">Validados</button>
           <button type="button" class="filter-tab" data-filter="divergente" onclick="setFilter(this)">Divergentes</button>
         </div>
-        <input type="search" class="search-input" id="search-input" placeholder="Buscar por responsável ou toner..." oninput="renderTabela()">
+        <div class="bulk-actions">
+          <input type="search" class="search-input" id="search-input" placeholder="Buscar por responsável ou toner..." oninput="renderTabela()">
+          <button type="button" class="btn-val approve" id="btn-validar-todas" onclick="validarTodas('validado')" disabled>Validar todas</button>
+          <button type="button" class="btn-val reject" id="btn-divergir-todas" onclick="validarTodas('divergente')" disabled>Divergir todas</button>
+        </div>
       </div>
 
       <table class="val-table">
@@ -527,6 +532,7 @@ const VAZIOS_TI_KEY = "tiVaziosSalaTI";
 let logs = [];
 let filtroAtual = "todos";
 let limiteTabela = 50;
+let isBulkValidating = false;
 const validandoIds = new Set();
 
 let vaziosTI = { W2150XC: 0, W2151XC: 0, W2152XC: 0, W2153XC: 0 };
@@ -613,7 +619,7 @@ async function validarMovimentacao(rowId, status) {
   renderTabela();
 
   try {
-    await apiPost({
+    const res = await apiPost({
       action: "validar",
       token: activeSession.idToken,
       id: rowId,
@@ -627,7 +633,11 @@ async function validarMovimentacao(rowId, status) {
     const latest = getValidacoes();
     delete latest[rowId];
     localStorage.setItem(VALIDACOES_KEY, JSON.stringify(latest));
-    await atualizarKpisEstoque();
+    if (Array.isArray(res?.estoque)) {
+      atualizarKpisComDados(res.estoque);
+    } else {
+      await atualizarKpisEstoque();
+    }
   } catch (err) {
     if (handleAuthError(err)) return;
     const latest = getValidacoes();
@@ -679,8 +689,7 @@ async function removerMovimentacao(rowId, btn) {
   }
 }
 
-function renderTabela() {
-  const tbody = document.getElementById("val-tbody");
+function getEnrichedAndFilteredLogs() {
   const query = normalizarTexto(document.getElementById("search-input").value || "");
   const validacoes = getValidacoes();
 
@@ -694,8 +703,6 @@ function renderTabela() {
     return { ...r, _id: id, _status: status, _val: val };
   });
 
-  document.getElementById("kpi-pendentes").textContent = pendentesCount;
-
   const filtered = enriched.filter(r => {
     if (filtroAtual !== "todos" && r._status !== filtroAtual) return false;
     if (query) {
@@ -705,6 +712,119 @@ function renderTabela() {
     }
     return true;
   });
+
+  return { pendentesCount, filtered };
+}
+
+async function validarTodas(status) {
+  if (isBulkValidating) return;
+  const activeSession = AUTH.getSession();
+  if (!activeSession) {
+    AUTH.requireAdmin();
+    return;
+  }
+
+  const { filtered } = getEnrichedAndFilteredLogs();
+  const alvos = filtered.filter(r => r._status !== status && !validandoIds.has(r._id));
+  if (!alvos.length) return;
+
+  const acaoTexto = status === "validado"
+    ? `Validar todas as ${alvos.length} movimentação(ões) exibida(s)?`
+    : `Marcar todas as ${alvos.length} movimentação(ões) exibida(s) como DIVERGENTE e estornar do estoque?`;
+  if (!confirm(acaoTexto)) return;
+
+  isBulkValidating = true;
+  const validacoes = getValidacoes();
+  const snapshots = [];
+  const validadoEm = new Date().toISOString();
+
+  alvos.forEach(r => {
+    const idx = findLogIndex(r._id);
+    const item = idx >= 0 ? logs[idx] : null;
+    snapshots.push({
+      id: r._id,
+      item,
+      prevValidacao: item ? item.validacao : undefined,
+      prevLocal: validacoes[r._id]
+    });
+    validandoIds.add(r._id);
+    validacoes[r._id] = { status, validadoPor: activeSession.email, validadoEm };
+    if (item) item.validacao = status;
+  });
+  localStorage.setItem(VALIDACOES_KEY, JSON.stringify(validacoes));
+  renderTabela();
+
+  try {
+    const ids = alvos.map(r => r._id);
+    let res;
+    try {
+      res = await apiPost({
+        action: "validarLote",
+        token: activeSession.idToken,
+        ids,
+        status
+      });
+    } catch (err) {
+      if (!/ação inválida/i.test(String(err?.message || ""))) throw err;
+      for (const r of alvos) {
+        await apiPost({
+          action: "validar",
+          token: activeSession.idToken,
+          id: r._id,
+          status,
+          modelo: r.modelo || "",
+          tipo: r.tipo || "",
+          qtd: Number(r.qtd) || 1,
+          validadoEm
+        });
+      }
+    }
+
+    const latest = getValidacoes();
+    ids.forEach(id => delete latest[id]);
+    localStorage.setItem(VALIDACOES_KEY, JSON.stringify(latest));
+
+    if (Array.isArray(res?.estoque)) {
+      atualizarKpisComDados(res.estoque);
+    } else {
+      await atualizarKpisEstoque();
+    }
+    loadTonerPill();
+  } catch (err) {
+    if (handleAuthError(err)) return;
+    const latest = getValidacoes();
+    snapshots.forEach(s => {
+      if (s.prevLocal) latest[s.id] = s.prevLocal;
+      else delete latest[s.id];
+      if (s.item) s.item.validacao = s.prevValidacao;
+    });
+    localStorage.setItem(VALIDACOES_KEY, JSON.stringify(latest));
+    alert(`Não foi possível atualizar em lote: ${err.message || err}`);
+  } finally {
+    alvos.forEach(r => validandoIds.delete(r._id));
+    isBulkValidating = false;
+    renderTabela();
+  }
+}
+
+function renderTabela() {
+  const tbody = document.getElementById("val-tbody");
+  const { pendentesCount, filtered } = getEnrichedAndFilteredLogs();
+
+  document.getElementById("kpi-pendentes").textContent = pendentesCount;
+
+  const qtdValidar  = filtered.filter(r => r._status !== "validado").length;
+  const qtdDivergir = filtered.filter(r => r._status !== "divergente").length;
+  const btnValidarTodas  = document.getElementById("btn-validar-todas");
+  const btnDivergirTodas = document.getElementById("btn-divergir-todas");
+  if (btnValidarTodas) {
+    btnValidarTodas.disabled = isBulkValidating || qtdValidar === 0;
+    btnValidarTodas.textContent = qtdValidar > 0 ? `Validar todas (${qtdValidar})` : "Validar todas";
+  }
+  if (btnDivergirTodas) {
+    btnDivergirTodas.disabled = isBulkValidating || qtdDivergir === 0;
+    btnDivergirTodas.textContent = qtdDivergir > 0 ? `Divergir todas (${qtdDivergir})` : "Divergir todas";
+  }
 
   if (!filtered.length) {
     tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--ink-soft);padding:24px;">Nenhuma movimentação encontrada para este filtro.</td></tr>`;
@@ -774,13 +894,18 @@ document.getElementById("val-tbody").addEventListener("click", e => {
   }
 });
 
+function atualizarKpisComDados(estoque) {
+  sessionStorage.setItem("tonerData", JSON.stringify(estoque));
+  const totalCheios = estoque.reduce((acc, row) => acc + (Number(row.cheios) || 0), 0);
+  const totalVazios = estoque.reduce((acc, row) => acc + (Number(row.vazios) || 0), 0);
+  document.getElementById("kpi-cheios").textContent = totalCheios;
+  document.getElementById("kpi-vazios").textContent = totalVazios;
+}
+
 async function atualizarKpisEstoque() {
   try {
     const estoque = await fetchTonerData(true);
-    const totalCheios = estoque.reduce((acc, row) => acc + (Number(row.cheios) || 0), 0);
-    const totalVazios = estoque.reduce((acc, row) => acc + (Number(row.vazios) || 0), 0);
-    document.getElementById("kpi-cheios").textContent = totalCheios;
-    document.getElementById("kpi-vazios").textContent = totalVazios;
+    atualizarKpisComDados(estoque);
   } catch {
     document.getElementById("kpi-cheios").textContent = "—";
     document.getElementById("kpi-vazios").textContent = "—";
