@@ -15,21 +15,49 @@ function formatMovementLine(m) {
   return `${nome} (${m.modelo}) · ${tipo} · Qtd: ${m.qtd}`;
 }
 
+function getTargetGroupIds(seaTalk) {
+  if (Array.isArray(seaTalk?.groupIds) && seaTalk.groupIds.length) {
+    return seaTalk.groupIds;
+  }
+  return seaTalk?.groupId ? [seaTalk.groupId] : [];
+}
+
+async function sendCardToSeaTalkGroups(seaTalk, card, fetchImpl) {
+  const targets = getTargetGroupIds(seaTalk);
+  if (!isSeaTalkBotConfigured(seaTalk) || !targets.length) {
+    return { sentCount: 0, errors: [] };
+  }
+
+  const results = await Promise.allSettled(
+    targets.map(groupId =>
+      sendGroupMessage({ groupId, message: card }, seaTalk, { fetchImpl })
+    )
+  );
+
+  const errors = [];
+  let sentCount = 0;
+  results.forEach((res, idx) => {
+    if (res.status === "fulfilled") {
+      sentCount += 1;
+    } else {
+      console.error(`SeaTalk group "${targets[idx]}" send failed:`, res.reason);
+      errors.push(res.reason);
+    }
+  });
+  return { sentCount, errors };
+}
+
 async function sendSeaTalkBotCard(config, details, fetchImpl) {
   const seaTalk = config.seatalk;
-  if (!isSeaTalkBotConfigured(seaTalk) || !seaTalk?.groupId) return false;
+  if (!isSeaTalkBotConfigured(seaTalk) || !getTargetGroupIds(seaTalk).length) return false;
 
   try {
     const card = buildMovementAlertCard({
       ...details,
       appUrl: config.notifications.appUrl
     });
-    await sendGroupMessage(
-      { groupId: seaTalk.groupId, message: card },
-      seaTalk,
-      { fetchImpl }
-    );
-    return true;
+    const { sentCount } = await sendCardToSeaTalkGroups(seaTalk, card, fetchImpl);
+    return sentCount > 0;
   } catch (err) {
     console.error("SeaTalk bot card failed:", err);
     return false;
@@ -75,14 +103,14 @@ async function sendWebhookAlert(config, { movimentos, resp, turno, obs }, fetchI
 }
 
 export function hasNotificationChannels(config) {
-  const hasSeaTalkBot = Boolean(isSeaTalkBotConfigured(config?.seatalk) && config?.seatalk?.groupId);
+  const hasSeaTalkBot = Boolean(isSeaTalkBotConfigured(config?.seatalk) && getTargetGroupIds(config?.seatalk).length);
   return Boolean(hasSeaTalkBot || config?.notifications?.alertWebhookUrl);
 }
 
 export async function notifyNewMovements(config, details, { fetchImpl = fetch } = {}) {
   if (!hasNotificationChannels(config)) return false;
 
-  const hasSeaTalkBot = Boolean(isSeaTalkBotConfigured(config?.seatalk) && config?.seatalk?.groupId);
+  const hasSeaTalkBot = Boolean(isSeaTalkBotConfigured(config?.seatalk) && getTargetGroupIds(config?.seatalk).length);
   const results = await Promise.allSettled([
     sendSeaTalkBotCard(config, details, fetchImpl),
     sendWebhookAlert(config, details, fetchImpl, hasSeaTalkBot)
@@ -97,7 +125,7 @@ export async function sendWeeklySummaryCard(
   { fetchImpl = fetch } = {}
 ) {
   const seaTalk = config.seatalk;
-  if (!isSeaTalkBotConfigured(seaTalk) || !seaTalk?.groupId) {
+  if (!isSeaTalkBotConfigured(seaTalk) || !getTargetGroupIds(seaTalk).length) {
     throw new Error("Bot SeaTalk ou SEATALK_GROUP_ID não configurado no Cloudflare Pages.");
   }
 
@@ -108,10 +136,9 @@ export async function sendWeeklySummaryCard(
     appUrl: config.notifications.appUrl
   });
 
-  await sendGroupMessage(
-    { groupId: seaTalk.groupId, message: card },
-    seaTalk,
-    { fetchImpl }
-  );
+  const { sentCount, errors } = await sendCardToSeaTalkGroups(seaTalk, card, fetchImpl);
+  if (sentCount === 0) {
+    throw errors[0] || new Error("Falha ao enviar resumo semanal no SeaTalk.");
+  }
   return true;
 }

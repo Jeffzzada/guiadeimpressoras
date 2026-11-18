@@ -28,5 +28,5 @@ GOOGLE_SERVICE_ACCOUNT_JSON='{"type":"service_account","client_email":"sheets-bo
 # SEATALK_APP_ID=""
 # SEATALK_APP_SECRET=""
 # SEATALK_SIGNING_SECRET=""
-# SEATALK_GROUP_ID=""
+# SEATALK_GROUP_ID="" # Para vários grupos, separe por vírgula: id1,id2
 # CRON_SECRET=""

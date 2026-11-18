@@ -609,3 +609,99 @@ test("resumoSemanal exige CRON_SECRET válido e envia card semanal do Armário d
   assert.match(card.elements[1].description.text, /Armário Impressora:/);
   assert.match(card.elements[1].description.text, /Estoque baixo/);
 });
+
+test("Suporta múltiplos grupos em SEATALK_GROUP_ID separados por vírgula", async () => {
+  const { env, sheets, sentGroupMessages, fetchImpl, nowMs } = await setupSeaTalkHarness();
+  const multiEnv = {
+    ...env,
+    SEATALK_GROUP_ID: "grp_ti_1, grp_ti_2",
+    CRON_SECRET: "cron-ok-123"
+  };
+
+  // Status GET informa groupConfigured=true e groupCount=2
+  const statusRes = await handleSeaTalkRequest(
+    new Request("https://guiadeimpressoras.pages.dev/api/seatalk", { method: "GET" }),
+    multiEnv,
+    null,
+    { fetchImpl, nowMs }
+  );
+  const statusJson = await statusRes.json();
+  assert.equal(statusJson.groupConfigured, true);
+  assert.equal(statusJson.groupCount, 2);
+
+  // Alerta de movimentação envia para ambos os grupos
+  const regRes = await handleApiRequest(
+    new Request("https://guiadeimpressoras.pages.dev/api", {
+      method: "POST",
+      body: JSON.stringify({
+        action: "registrar",
+        modelo: "W2153XC",
+        tipo: "saida_cheio",
+        qtd: 1,
+        resp: "Multi",
+        turno: "T1"
+      })
+    }),
+    multiEnv,
+    null,
+    { fetchImpl, nowMs }
+  );
+  assert.equal(regRes.status, 200);
+  assert.deepEqual(
+    sentGroupMessages.map(m => m.group_id),
+    ["grp_ti_1", "grp_ti_2"]
+  );
+
+  // Resumo semanal envia para ambos os grupos
+  const cronRes = await handleApiRequest(
+    new Request("https://guiadeimpressoras.pages.dev/api", {
+      method: "POST",
+      headers: { Authorization: "Bearer cron-ok-123" },
+      body: JSON.stringify({ action: "resumoSemanal" })
+    }),
+    multiEnv,
+    null,
+    { fetchImpl, nowMs }
+  );
+  assert.equal(cronRes.status, 200);
+  assert.deepEqual(
+    sentGroupMessages.slice(2).map(m => m.group_id),
+    ["grp_ti_1", "grp_ti_2"]
+  );
+
+  // Clique vindo do 2º grupo é aceito; clique de grupo fora da lista é ignorado
+  const regJson = await regRes.json();
+  const sendFromGroup = async (groupId, eventId) => {
+    const body = JSON.stringify({
+      event_id: eventId,
+      event_type: "interactive_message_click",
+      app_id: multiEnv.SEATALK_APP_ID,
+      event: {
+        message_id: `msg_${eventId}`,
+        group_id: groupId,
+        email: "jefferson.msantos@shopee.com",
+        value: `val:${regJson.id}`
+      }
+    });
+    const sig = await computeSeaTalkSignature(enc.encode(body), multiEnv.SEATALK_SIGNING_SECRET);
+    return handleSeaTalkRequest(
+      new Request("https://guiadeimpressoras.pages.dev/api/seatalk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Signature: sig },
+        body
+      }),
+      multiEnv,
+      null,
+      { fetchImpl, nowMs }
+    );
+  };
+
+  await sendFromGroup("grp_intruso", "evt_multi_ignore");
+  assert.equal(sentGroupMessages.length, 4);
+  assert.equal(sheets.get("Movimentações").rows[1][8], "pendente");
+
+  await sendFromGroup("grp_ti_2", "evt_multi_ok");
+  assert.equal(sentGroupMessages.length, 5);
+  assert.equal(sentGroupMessages[4].group_id, "grp_ti_2");
+  assert.equal(sheets.get("Movimentações").rows[1][8], "validado");
+});

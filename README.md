@@ -108,7 +108,7 @@ No painel do projeto no Cloudflare Pages (**Settings → Environment variables**
 | `SEATALK_APP_ID` | Não | App ID do bot criado no portal `open.seatalk.io` (habilita cards interativos com botões). |
 | `SEATALK_APP_SECRET` | Não | App Secret do bot no `open.seatalk.io` (*Secret*). |
 | `SEATALK_SIGNING_SECRET` | Não | Signing Secret do Event Callback (`https://guiadeimpressoras.pages.dev/api/seatalk`, *Secret*). |
-| `SEATALK_GROUP_ID` | Não | ID do grupo do SeaTalk onde o bot envia os cards e responde comandos. |
+| `SEATALK_GROUP_ID` | Não | ID(s) do(s) grupo(s) do SeaTalk separados por vírgula (`id1,id2`) onde o bot atua. |
 | `CRON_SECRET` | Não | Segredo compartilhado com o GitHub Actions para disparar o resumo semanal no SeaTalk. |
 | `APP_URL` | Não | URL pública do portal usada nos links de notificação (padrão: `https://guiadeimpressoras.pages.dev`). |
 

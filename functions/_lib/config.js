@@ -96,13 +96,19 @@ function parseServiceAccountCredentials(env) {
   return { serviceAccountEmail, privateKey };
 }
 
-function parseAdminEmails(raw) {
+function parseCommaList(raw, { lowercase = false } = {}) {
   const text = String(raw || "").trim();
-  if (!text) return [...DEFAULT_ADMIN_EMAILS];
-  const emails = text
-    .split(/[,\n;]+/)
-    .map(s => s.trim().toLowerCase())
-    .filter(Boolean);
+  if (!text) return [];
+  const seen = new Set();
+  for (const part of text.split(/[,\n;]+/)) {
+    const val = lowercase ? part.trim().toLowerCase() : part.trim();
+    if (val) seen.add(val);
+  }
+  return [...seen];
+}
+
+function parseAdminEmails(raw) {
+  const emails = parseCommaList(raw, { lowercase: true });
   return emails.length ? emails : [...DEFAULT_ADMIN_EMAILS];
 }
 
@@ -139,11 +145,13 @@ export function getRuntimeConfig(env) {
 }
 
 export function getSeaTalkConfig(env) {
+  const groupIds = parseCommaList(env?.SEATALK_GROUP_ID);
   return {
     appId: String(env?.SEATALK_APP_ID || "").trim(),
     appSecret: String(env?.SEATALK_APP_SECRET || "").trim(),
     signingSecret: String(env?.SEATALK_SIGNING_SECRET || "").trim(),
-    groupId: String(env?.SEATALK_GROUP_ID || "").trim(),
+    groupId: groupIds[0] || "",
+    groupIds,
     appUrl: String(env?.APP_URL || "https://guiadeimpressoras.pages.dev").trim().replace(/\/+$/, "")
   };
 }

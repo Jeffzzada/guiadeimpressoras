@@ -117,8 +117,22 @@ async function replyGroupCard(groupId, threadId, card, seaTalkConfig, deps) {
   await sendGroupMessage({ groupId, threadId, message: card }, seaTalkConfig, deps);
 }
 
+function getConfiguredGroupIds(seaTalkConfig) {
+  if (Array.isArray(seaTalkConfig?.groupIds) && seaTalkConfig.groupIds.length) {
+    return seaTalkConfig.groupIds;
+  }
+  return seaTalkConfig?.groupId ? [seaTalkConfig.groupId] : [];
+}
+
+function isAllowedSeaTalkGroup(seaTalkConfig, incomingGroupId) {
+  const allowed = getConfiguredGroupIds(seaTalkConfig);
+  const incoming = String(incomingGroupId || "").trim();
+  if (!allowed.length || !incoming) return true;
+  return allowed.includes(incoming);
+}
+
 async function avisarGroupIdSeAusente(groupId, threadId, seaTalkConfig, deps) {
-  if (seaTalkConfig?.groupId || !groupId) return;
+  if (getConfiguredGroupIds(seaTalkConfig).length || !groupId) return;
   await replyGroupText(
     groupId,
     threadId,
@@ -138,7 +152,7 @@ async function handleInteractiveClick(payload, env, deps) {
 
   if (!isSeaTalkBotConfigured(seaTalk) || !groupId) return;
 
-  if (seaTalk.groupId && event.group_id && String(event.group_id) !== seaTalk.groupId) {
+  if (!isAllowedSeaTalkGroup(seaTalk, event.group_id)) {
     console.warn("SeaTalk click ignored from non-configured group:", event.group_id);
     return;
   }
@@ -434,7 +448,7 @@ async function handleMentionOrMessage(payload, env, deps) {
   ).trim();
 
   if (!groupId || !isSeaTalkBotConfigured(seaTalk)) return;
-  if (seaTalk.groupId && event.group_id && String(event.group_id) !== seaTalk.groupId) {
+  if (!isAllowedSeaTalkGroup(seaTalk, event.group_id)) {
     return;
   }
 
@@ -484,12 +498,14 @@ export async function handleSeaTalkRequest(request, env, ctx = null, deps = {}) 
   const seaTalk = getSeaTalkConfig(env);
 
   if (method === "GET") {
+    const configuredGroups = getConfiguredGroupIds(seaTalk);
     return jsonResponse(200, {
       ok: true,
       endpoint: "seatalk-callback",
       signingSecretConfigured: Boolean(seaTalk.signingSecret),
       botConfigured: isSeaTalkBotConfigured(seaTalk),
-      groupConfigured: Boolean(seaTalk.groupId)
+      groupConfigured: configuredGroups.length > 0,
+      groupCount: configuredGroups.length
     });
   }
 
