@@ -659,18 +659,22 @@ export function createInventoryService(sheetsClient, config) {
       await sheetsClient.batchUpdateValues(stockUpdates);
     }
 
+    const publicEstoque = buildPublicEstoqueList(estByRef, tiByRef);
+
     return {
       ok: true,
       id: ids[0],
       ids,
       validacao: "pendente",
-      estoque: buildPublicEstoqueList(estByRef, tiByRef),
+      estoque: publicEstoque,
       notificationData: {
+        ids,
         movimentos,
         resp: readTextFromSheet(resp),
         turno,
         obs: readTextFromSheet(obs),
-        data
+        data,
+        estoque: publicEstoque
       }
     };
   }

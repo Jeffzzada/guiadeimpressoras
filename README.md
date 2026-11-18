@@ -107,6 +107,10 @@ No painel do projeto no Cloudflare Pages (**Settings → Environment variables**
 | `RESEND_API_KEY` | Não | Chave da API do Resend para enviar e-mail de alerta aos admins. |
 | `RESEND_FROM_EMAIL` | Não | Remetente do Resend (padrão: `Shopee TI Impressora <onboarding@resend.dev>`). |
 | `ALERT_WEBHOOK_URL` | Não | URL de webhook de grupo (detecta automaticamente **SeaTalk**, Discord, Slack ou Google Chat). |
+| `SEATALK_APP_ID` | Não | App ID do bot criado no portal `open.seatalk.io` (habilita cards interativos com botões). |
+| `SEATALK_APP_SECRET` | Não | App Secret do bot no `open.seatalk.io` (*Secret*). |
+| `SEATALK_SIGNING_SECRET` | Não | Signing Secret do Event Callback (`https://guiadeimpressoras.pages.dev/api/seatalk`, *Secret*). |
+| `SEATALK_GROUP_ID` | Não | ID do grupo do SeaTalk onde o bot envia os cards e responde comandos. |
 | `APP_URL` | Não | URL pública do portal usada nos links de notificação (padrão: `https://guiadeimpressoras.pages.dev`). |
 
 \* Use **apenas** `GOOGLE_SERVICE_ACCOUNT_JSON` **ou** o par `GOOGLE_SERVICE_ACCOUNT_EMAIL` + `GOOGLE_PRIVATE_KEY`.

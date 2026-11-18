@@ -13,6 +13,8 @@
  * - SHEET_TAB_VAZIOS_TI (opcional): nome da aba de vazios na sala de TI (padrão: "VaziosSalaTI").
  * - RESEND_API_KEY / RESEND_FROM_EMAIL (opcionais): disparo de e-mail via Resend.
  * - ALERT_WEBHOOK_URL (opcional): webhook (SeaTalk, Slack, Google Chat ou Discord).
+ * - SEATALK_APP_ID / SEATALK_APP_SECRET / SEATALK_SIGNING_SECRET / SEATALK_GROUP_ID (opcionais):
+ *   bot interativo no SeaTalk com cards, botões de validação e controle rápido.
  * - APP_URL (opcional): URL pública do portal para links nas notificações.
  */
 
@@ -132,6 +134,17 @@ export function getRuntimeConfig(env) {
       ).trim(),
       alertWebhookUrl: String(env?.ALERT_WEBHOOK_URL || "").trim(),
       appUrl: String(env?.APP_URL || "https://guiadeimpressoras.pages.dev").trim().replace(/\/+$/, "")
-    }
+    },
+    seatalk: getSeaTalkConfig(env)
+  };
+}
+
+export function getSeaTalkConfig(env) {
+  return {
+    appId: String(env?.SEATALK_APP_ID || "").trim(),
+    appSecret: String(env?.SEATALK_APP_SECRET || "").trim(),
+    signingSecret: String(env?.SEATALK_SIGNING_SECRET || "").trim(),
+    groupId: String(env?.SEATALK_GROUP_ID || "").trim(),
+    appUrl: String(env?.APP_URL || "https://guiadeimpressoras.pages.dev").trim().replace(/\/+$/, "")
   };
 }
