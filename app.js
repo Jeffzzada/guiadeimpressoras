@@ -15,6 +15,8 @@ const TONERS = [
   { ref: "W2153XC", nome: "Magenta", cor: "#C0004A" }
 ];
 
+const MAX_CHEIOS_IMPRESSORA = 3;
+
 const CORES_MAP = Object.fromEntries(TONERS.map(t => [t.ref, { nome: t.nome, cor: t.cor }]));
 
 const TIPO_LABEL = {

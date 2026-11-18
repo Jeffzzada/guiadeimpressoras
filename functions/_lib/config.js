@@ -24,6 +24,8 @@ export const TONERS = [
   { ref: "W2153XC", nome: "Magenta" }
 ];
 
+export const MAX_CHEIOS_IMPRESSORA = 3;
+
 export const TONER_REFS = TONERS.map(t => t.ref);
 export const TONER_MAP = Object.fromEntries(TONERS.map(t => [t.ref, t]));
 

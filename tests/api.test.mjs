@@ -458,7 +458,7 @@ test("Full movement lifecycle: registrar, registrarLote, notifications, formula 
     movimentos: [
       { modelo: "W2150XC", tipo: "saida_cheio", qtd: 1 },
       { modelo: "W2150XC", tipo: "entrada_vazio", qtd: 1 },
-      { modelo: "W2151XC", tipo: "entrada_cheio", qtd: 2 }
+      { modelo: "W2151XC", tipo: "entrada_cheio", qtd: 1 }
     ]
   });
   assert.equal(regLote.status, 200);
@@ -466,7 +466,19 @@ test("Full movement lifecycle: registrar, registrarLote, notifications, formula 
   assert.equal(regLote.json.estoque[0].cheios, 0);
   assert.equal(regLote.json.estoque[0].vazios, 1);
   assert.equal(regLote.json.estoque[0].solicitarTI, true); // 0 < ArmarioTI(1)
-  assert.equal(regLote.json.estoque[1].cheios, 4);
+  assert.equal(regLote.json.estoque[1].cheios, 3);
+
+  // Tentar adicionar acima do limite de 3 cheios por cor na impressora retorna 400
+  const regExcede = await callApi("POST", "", {
+    action: "registrar",
+    modelo: "W2151XC",
+    tipo: "entrada_cheio",
+    qtd: 1,
+    resp: "Carlos",
+    turno: "T3"
+  });
+  assert.equal(regExcede.status, 400);
+  assert.match(regExcede.json.erro, /máximo de 3/);
 
   const adminToken = await makeIdToken();
 
@@ -534,7 +546,7 @@ test("Full movement lifecycle: registrar, registrarLote, notifications, formula 
     status: "validado"
   });
   assert.equal(loteReval.status, 200);
-  assert.equal(loteReval.json.estoque[1].cheios, 4);
+  assert.equal(loteReval.json.estoque[1].cheios, 3);
 
   // 9. Zerar estoque
   const zerado = await callApi("POST", "", {

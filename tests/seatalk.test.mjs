@@ -469,7 +469,7 @@ test("SeaTalk Bot end-to-end: sends interactive alert card, validates/reverts, a
   const menuCard = sentGroupMessages[4].message.interactive_message;
   assert.equal(menuCard.elements[2].button_group[0].value, "add_imp:W2150XC");
 
-  // 7. Admin clica em "+1 Preto" na impressora -> soma +1 em webenv e registra já validado
+  // 7. Admin clica em "+1 Ciano" (saldo 1 -> 2) e tenta "+1 Preto" (já no limite 3 -> bloqueado)
   await sendSeaTalkEvent({
     event_id: "evt_add_imp_1",
     event_type: "interactive_message_click",
@@ -478,15 +478,29 @@ test("SeaTalk Bot end-to-end: sends interactive alert card, validates/reverts, a
       message_id: "msg_5",
       group_id: "grp_ti_1",
       employee_code: "e_ti_1",
-      value: "add_imp:W2150XC"
+      value: "add_imp:W2151XC"
     }
   });
-  assert.equal(sheets.get("webinventario").rows[1][1], 4);
+  assert.equal(sheets.get("webinventario").rows[2][1], 3);
   const lastLogRow = sheets.get("Movimentações").rows[2];
-  assert.equal(lastLogRow[2], "W2150XC");
+  assert.equal(lastLogRow[2], "W2151XC");
   assert.equal(lastLogRow[3], "entrada_cheio");
   assert.equal(lastLogRow[8], "validado");
   assert.equal(lastLogRow[9], "tacio.correia@shopee.com");
+
+  await sendSeaTalkEvent({
+    event_id: "evt_add_imp_limit",
+    event_type: "interactive_message_click",
+    app_id: env.SEATALK_APP_ID,
+    event: {
+      message_id: "msg_5b",
+      group_id: "grp_ti_1",
+      employee_code: "e_ti_1",
+      value: "add_imp:W2150XC"
+    }
+  });
+  assert.equal(sheets.get("webinventario").rows[1][1], 3);
+  assert.match(sentGroupMessages.at(-1).message.text.content, /máximo de 3/);
 
   // 8. Admin clica em "+1 Ciano (TI)" -> atualiza ArmarioTI
   await sendSeaTalkEvent({

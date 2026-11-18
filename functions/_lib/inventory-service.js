@@ -1,5 +1,6 @@
 import {
   ApiError,
+  MAX_CHEIOS_IMPRESSORA,
   TONERS,
   TONER_MAP,
   TONER_REFS,
@@ -630,6 +631,15 @@ export function createInventoryService(sheetsClient, config) {
 
     for (const mov of movimentos) {
       const stock = estByRef[mov.modelo];
+      if (mov.tipo === "entrada_cheio" && stock.cheios + mov.qtd > MAX_CHEIOS_IMPRESSORA) {
+        const nome = TONER_MAP[mov.modelo]?.nome || mov.modelo;
+        throw new ApiError(
+          400,
+          stock.cheios >= MAX_CHEIOS_IMPRESSORA
+            ? `Limite do Armário da Impressora atingido: máximo de ${MAX_CHEIOS_IMPRESSORA} toners cheios para ${nome} (${mov.modelo}).`
+            : `Não é possível adicionar ${mov.qtd} unidade(s) de ${nome} (${mov.modelo}): saldo atual ${stock.cheios} e o limite do Armário da Impressora é ${MAX_CHEIOS_IMPRESSORA} por cor.`
+        );
+      }
       applyMovementDelta(stock, mov.tipo, mov.qtd, +1);
       touchedRefs.add(mov.modelo);
 

@@ -353,7 +353,7 @@
       Armário inferior da impressora
     </div>
     <h1 class="page-title">Controle de toners</h1>
-    <p class="page-desc">Ajuste a quantidade de toners cheios usando − e +, informe seu nome e clique em Salvar para registrar a movimentação.</p>
+    <p class="page-desc">Ajuste a quantidade de toners cheios usando − e + (limite de 3 por cor no armário), informe seu nome e clique em Salvar.</p>
   </div>
 
   <div class="alert-ti-banner" id="alerta-retirada-ti" role="alert"></div>
@@ -641,7 +641,7 @@ function renderCheiosEditor() {
       : `Atual: ${orig}`;
     const deltaClass = delta > 0 ? " in" : delta < 0 ? " out" : "";
     const decDisabled = isEditorSaving || qtd === 0 ? "disabled" : "";
-    const incDisabled = isEditorSaving ? "disabled" : "";
+    const incDisabled = isEditorSaving || qtd >= MAX_CHEIOS_IMPRESSORA ? "disabled" : "";
     return `<div class="cheio-card${delta !== 0 ? " changed" : ""}">
       <div class="cheio-head">
         <div class="cor-cell">
@@ -668,6 +668,10 @@ function alterarCheioDraft(ref, delta) {
   if (isEditorSaving || !(ref in cheiosDraft)) return;
   const atual = Number(cheiosDraft[ref]) || 0;
   const orig  = Number(cheiosOriginal[ref]) || 0;
+  if (delta > 0 && atual + delta > MAX_CHEIOS_IMPRESSORA) {
+    setEditorFeedback("warn", `Limite do Armário da Impressora: máximo de ${MAX_CHEIOS_IMPRESSORA} toners cheios por cor.`);
+    return;
+  }
   const proximo = Math.max(0, atual + delta);
   if (Math.abs(proximo - orig) > 20) {
     setEditorFeedback("error", "Alteração máxima de 20 unidades por cor em um mesmo envio.");
@@ -719,7 +723,9 @@ function aplicarEstoqueNaTela(data) {
   if (draft && draft.deltas && Object.keys(draft.deltas).length > 0) {
     Object.keys(draft.deltas).forEach(ref => {
       if (ref in cheiosDraft) {
-        cheiosDraft[ref] = Math.max(0, cheiosOriginal[ref] + (Number(draft.deltas[ref]) || 0));
+        const d = Number(draft.deltas[ref]) || 0;
+        const bruto = Math.max(0, cheiosOriginal[ref] + d);
+        cheiosDraft[ref] = d > 0 ? Math.min(Math.max(cheiosOriginal[ref], MAX_CHEIOS_IMPRESSORA), bruto) : bruto;
       }
     });
     if (typeof draft.resp === "string") document.getElementById("editor-resp").value = draft.resp;
@@ -1035,6 +1041,19 @@ async function submeterMovimentacao() {
     qtdEl.style.borderColor = "var(--shopee)";
     qtdEl.focus();
     setModalError("Informe uma quantidade inteira entre 1 e 20.");
+    return;
+  }
+
+  const saldoAtual = Number(cheiosOriginal[modelo]) || 0;
+  if (tipo === "entrada_cheio" && saldoAtual + qtd > MAX_CHEIOS_IMPRESSORA) {
+    qtdEl.style.borderColor = "var(--shopee)";
+    qtdEl.focus();
+    const info = CORES_MAP[modelo] || { nome: modelo };
+    setModalError(
+      saldoAtual >= MAX_CHEIOS_IMPRESSORA
+        ? `Limite atingido: máximo de ${MAX_CHEIOS_IMPRESSORA} toners cheios de ${info.nome} no Armário da Impressora.`
+        : `Não é possível adicionar ${qtd} de ${info.nome}: saldo atual ${saldoAtual} e máximo é ${MAX_CHEIOS_IMPRESSORA} por cor.`
+    );
     return;
   }
 
