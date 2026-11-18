@@ -314,8 +314,9 @@
   }
 
 
-  function onCredential(response) {
-    const result = AUTH.handleGoogleCredential(response);
+  async function onCredential(response) {
+    showAlert("info", "Validando permissão administrativa...");
+    const result = await AUTH.authenticateWithBackend(response);
     if (result.ok) {
       window.location.href = "admin.html";
     } else {

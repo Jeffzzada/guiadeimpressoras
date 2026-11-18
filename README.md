@@ -99,7 +99,7 @@ No painel do projeto no Cloudflare Pages (**Settings → Environment variables**
 | `GOOGLE_SERVICE_ACCOUNT_EMAIL` | Alternativa* | E-mail da Service Account (use caso prefira separar do JSON). |
 | `GOOGLE_PRIVATE_KEY` | Alternativa* | Chave privada PKCS#8 (`-----BEGIN PRIVATE KEY-----...`, como *Secret*). |
 | `GOOGLE_CLIENT_ID` | Não | Sobrescreve o Client ID OAuth padrão definido no projeto. |
-| `ADMIN_EMAILS` | Não | Lista separada por vírgula dos e-mails autorizados no backend (padrão: admins em [`app.js`](app.js)). |
+| `ADMIN_EMAILS` | Não | Lista separada por vírgula dos e-mails autorizados no backend (validada exclusivamente no servidor). |
 | `SHEET_TAB_ESTOQUE` | Não | Nome da aba do Armário da Impressora (padrão: `webinventario`). |
 | `SHEET_TAB_LOG` | Não | Nome da aba de movimentações (padrão: detecta `Movimentações`, `Registros`, `log`, etc.). |
 | `SHEET_TAB_ARMARIO_TI` | Não | Nome da aba do Armário de TI (padrão: `ArmarioTI`). |
@@ -123,8 +123,10 @@ O workflow [`.github/workflows/resumo-semanal.yml`](.github/workflows/resumo-sem
 
 ### 4. Como adicionar ou remover um administrador de TI
 
-1. Atualize `CONFIG.ADMIN_WHITELIST` em [`app.js`](app.js) (validação na tela de login).
-2. Caso utilize a variável `ADMIN_EMAILS` no Cloudflare Pages, atualize-a também (ou deixe-a alinhada com [`functions/_lib/config.js`](functions/_lib/config.js)).
+A lista de administradores fica **somente no backend** (nunca é exposta no frontend):
+
+1. Configure ou atualize a variável `ADMIN_EMAILS` no Cloudflare Pages (**Settings → Variables and Secrets**, separando os e-mails por vírgula).
+2. O padrão de fallback no servidor fica em `DEFAULT_ADMIN_EMAILS` dentro de [`functions/_lib/config.js`](functions/_lib/config.js).
 
 ### 5. Verificação rápida após publicar
 

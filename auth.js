@@ -38,21 +38,24 @@ const AUTH = {
     }
   },
 
-  isAuthorizedEmail(email) {
-    if (!email || typeof CONFIG === "undefined" || !Array.isArray(CONFIG.ADMIN_WHITELIST)) {
-      return false;
+  validateTokenClaims(payload) {
+    if (!payload || typeof payload !== "object" || !payload.email) {
+      return { ok: false, reason: "invalid_token", message: "Não foi possível validar o token retornado pelo Google." };
     }
-    const normalized = String(email).trim().toLowerCase();
-    return CONFIG.ADMIN_WHITELIST.some(allowed => allowed.trim().toLowerCase() === normalized);
+    if (this.isClientConfigured() && payload.aud !== CONFIG.GOOGLE_CLIENT_ID) {
+      return { ok: false, reason: "invalid_aud", message: "Token emitido para outro aplicativo." };
+    }
+    if (!payload.email_verified) {
+      return { ok: false, reason: "unverified", message: "Sua conta Google precisa estar com o e-mail verificado." };
+    }
+    if (!payload.exp || Date.now() >= Number(payload.exp) * 1000) {
+      return { ok: false, reason: "expired", message: "O token retornado já está expirado. Tente entrar novamente." };
+    }
+    return { ok: true };
   },
 
   isValidTokenPayload(payload) {
-    if (!payload || typeof payload !== "object" || !payload.email) return false;
-    if (!payload.email_verified) return false;
-    if (this.isClientConfigured() && payload.aud !== CONFIG.GOOGLE_CLIENT_ID) return false;
-    if (!payload.exp || Date.now() >= Number(payload.exp) * 1000) return false;
-    if (!this.isAuthorizedEmail(payload.email)) return false;
-    return true;
+    return this.validateTokenClaims(payload).ok;
   },
 
   getSession() {
@@ -143,24 +146,26 @@ const AUTH = {
   handleGoogleCredential(response) {
     const token = response?.credential || "";
     const payload = this.decodeJwt(token);
-    if (!payload || !payload.email) {
-      return { ok: false, reason: "invalid_token", message: "Não foi possível validar o token retornado pelo Google." };
-    }
-    if (this.isClientConfigured() && payload.aud !== CONFIG.GOOGLE_CLIENT_ID) {
-      return { ok: false, reason: "invalid_aud", message: "Token emitido para outro aplicativo." };
-    }
-    if (!payload.email_verified) {
-      return { ok: false, reason: "unverified", message: "Sua conta Google precisa estar com o e-mail verificado." };
-    }
-    if (!payload.exp || Date.now() >= Number(payload.exp) * 1000) {
-      return { ok: false, reason: "expired", message: "O token retornado já está expirado. Tente entrar novamente." };
-    }
-    if (!this.isAuthorizedEmail(payload.email)) {
+    const check = this.validateTokenClaims(payload);
+    if (!check.ok) return check;
+
+    const session = this.saveSession(payload, token);
+    return session ? { ok: true, session } : { ok: false, reason: "invalid_session", message: "Falha ao iniciar sessão." };
+  },
+
+  async authenticateWithBackend(response) {
+    const token = response?.credential || "";
+    const payload = this.decodeJwt(token);
+    const check = this.validateTokenClaims(payload);
+    if (!check.ok) return check;
+
+    try {
+      await apiPost({ action: "verificarAdmin", token });
+    } catch (err) {
       return {
         ok: false,
         reason: "unauthorized",
-        email: payload.email,
-        message: `Acesso negado: o e-mail "${payload.email}" não está na lista de administradores de TI autorizados.`
+        message: err?.message || "Acesso negado pelo servidor."
       };
     }
 

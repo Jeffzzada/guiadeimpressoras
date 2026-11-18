@@ -1,12 +1,9 @@
 /* ── CONFIG ── */
-const CONFIG = {
+const CONFIG = Object.freeze({
   API_URL: "/api",
   GOOGLE_CLIENT_ID: "1028346342471-oq4rafb2rr864rl3dck10pc3te3ilvsb.apps.googleusercontent.com",
-  ADMIN_TIMEOUT_MINUTES: 5,
-  ADMIN_WHITELIST: [
-    "jefferson.msantos@shopee.com", "tacio.correia@shopee.com"
-  ]
-};
+  ADMIN_TIMEOUT_MINUTES: 5
+});
 
 const TONERS = [
   { ref: "W2150XC", nome: "Preto",   cor: "#1A1A1A" },

@@ -202,6 +202,13 @@ export async function handleApiRequest(request, env, ctx = null, deps = {}) {
         ...(jwksUrl ? { jwksUrl } : {})
       });
 
+      if (action === "verificarAdmin") {
+        return jsonResponse(request, 200, {
+          ok: true,
+          email: adminUser.email,
+          name: adminUser.name
+        });
+      }
       if (action === "validar") {
         return jsonResponse(request, 200, await service.validar(payload, adminUser));
       }

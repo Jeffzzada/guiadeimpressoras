@@ -594,7 +594,20 @@ test("Admin auth enforcement: rejects missing, expired, wrong audience, unverifi
   assert.equal(intrusoRes.status, 403);
   assert.match(intrusoRes.json.erro, /acesso negado/i);
 
+  const intrusoLoginRes = await callApi("POST", "", {
+    action: "verificarAdmin",
+    token: intrusoToken
+  });
+  assert.equal(intrusoLoginRes.status, 403);
+
   const validToken = await makeIdToken();
+  const okLoginRes = await callApi("POST", "", {
+    action: "verificarAdmin",
+    token: validToken
+  });
+  assert.equal(okLoginRes.status, 200);
+  assert.equal(okLoginRes.json.email, "jefferson.msantos@shopee.com");
+
   const diagRes = await callApi("POST", "", {
     action: "diagnostico",
     token: validToken
