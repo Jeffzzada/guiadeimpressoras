@@ -117,6 +117,17 @@ async function replyGroupCard(groupId, threadId, card, seaTalkConfig, deps) {
   await sendGroupMessage({ groupId, threadId, message: card }, seaTalkConfig, deps);
 }
 
+async function avisarGroupIdSeAusente(groupId, threadId, seaTalkConfig, deps) {
+  if (seaTalkConfig?.groupId || !groupId) return;
+  await replyGroupText(
+    groupId,
+    threadId,
+    `ℹ️ Para migrar os avisos da Conta do Sistema para este Bot (com botões **Permitir / Recusar**), configure no Cloudflare Pages:\n**SEATALK_GROUP_ID:** \`${groupId}\``,
+    seaTalkConfig,
+    deps
+  );
+}
+
 async function handleInteractiveClick(payload, env, deps) {
   const event = payload?.event || {};
   const config = getRuntimeConfig(env);
@@ -163,6 +174,7 @@ async function handleInteractiveClick(payload, env, deps) {
       seaTalk,
       deps
     );
+    await avisarGroupIdSeAusente(groupId, threadId, seaTalk, deps);
     return;
   }
 
@@ -237,11 +249,11 @@ async function handleInteractiveClick(payload, env, deps) {
 
     const res = await service.validarLote({ ids, status }, adminUser);
     const title = isDivergente
-      ? "❌ Marcado como DIVERGENTE"
-      : "✅ Movimentação VALIDADA";
+      ? "❌ Movimentação RECUSADA"
+      : "✅ Movimentação PERMITIDA";
     const summary = isDivergente
-      ? `**Por:** ${actor.email}\n**Ação:** ${res.atualizados} registro(s) estornado(s) no estoque.`
-      : `**Por:** ${actor.email}\n**Ação:** ${res.atualizados} registro(s) validado(s).`;
+      ? `**Por:** ${actor.email}\n**Ação:** ${res.atualizados} registro(s) recusado(s) e estornado(s) no estoque.`
+      : `**Por:** ${actor.email}\n**Ação:** ${res.atualizados} registro(s) permitido(s).`;
 
     await replyGroupCard(
       groupId,
@@ -278,8 +290,10 @@ async function handleInteractiveClick(payload, env, deps) {
       groupId,
       threadId,
       buildActionResultCard({
-        title: isDivergente ? "❌ Lote marcado como DIVERGENTE" : "✅ Lote VALIDADO",
-        summary: `**Por:** ${actor.email}\n**Registros atualizados:** ${res.atualizados}`,
+        title: isDivergente ? "❌ Lote RECUSADO" : "✅ Lote PERMITIDO",
+        summary: isDivergente
+          ? `**Por:** ${actor.email}\n**Registros recusados e estornados:** ${res.atualizados}`
+          : `**Por:** ${actor.email}\n**Registros permitidos:** ${res.atualizados}`,
         estoque: res.estoque,
         appUrl
       }),
@@ -459,6 +473,8 @@ async function handleMentionOrMessage(payload, env, deps) {
     seaTalk,
     deps
   );
+
+  await avisarGroupIdSeAusente(groupId, threadId, seaTalk, deps);
 }
 
 export async function handleSeaTalkRequest(request, env, ctx = null, deps = {}) {

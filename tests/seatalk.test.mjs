@@ -383,6 +383,8 @@ test("SeaTalk Bot end-to-end: sends interactive alert card, validates/reverts, a
   assert.equal(alertCard.group_id, "grp_ti_1");
   assert.equal(alertCard.message.tag, "interactive_message");
   const buttons = alertCard.message.interactive_message.elements[2].button_group;
+  assert.equal(buttons[0].text, "✅ Permitir");
+  assert.equal(buttons[1].text, "❌ Recusar");
   assert.equal(buttons[0].value, `val:${regJson.id}`);
   assert.equal(buttons[1].value, `div:${regJson.id}`);
   assert.equal(buttons[2].value, "menu:toners");
@@ -403,7 +405,7 @@ test("SeaTalk Bot end-to-end: sends interactive alert card, validates/reverts, a
   assert.match(sentGroupMessages[1].message.text.content, /Acesso restrito/);
   assert.equal(sheets.get("Movimentações").rows[1][8], "pendente");
 
-  // 3. Admin clica em "Validar" pelo SeaTalk
+  // 3. Admin clica em "Permitir" pelo SeaTalk
   const valClick = await sendSeaTalkEvent({
     event_id: "evt_val_1",
     event_type: "interactive_message_click",
@@ -419,7 +421,7 @@ test("SeaTalk Bot end-to-end: sends interactive alert card, validates/reverts, a
   assert.equal(sheets.get("Movimentações").rows[1][8], "validado");
   assert.equal(sheets.get("Movimentações").rows[1][9], "jefferson.msantos@shopee.com");
   assert.equal(sentGroupMessages[2].message.thread_id, "msg_1");
-  assert.match(sentGroupMessages[2].message.interactive_message.elements[0].title.text, /VALIDADA/);
+  assert.match(sentGroupMessages[2].message.interactive_message.elements[0].title.text, /PERMITIDA/);
 
   // 4. Retry duplicado com mesmo event_id é ignorado sem re-enviar mensagem
   const dupClick = await sendSeaTalkEvent({

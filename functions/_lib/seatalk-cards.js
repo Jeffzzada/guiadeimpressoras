@@ -133,8 +133,8 @@ export function buildMovementAlertCard({
         {
           element_type: "button_group",
           button_group: [
-            callbackButton("✅ Validar", valValue),
-            callbackButton("❌ Divergente", divValue),
+            callbackButton("✅ Permitir", valValue),
+            callbackButton("❌ Recusar", divValue),
             callbackButton("📦 Gerenciar Toners", "menu:toners")
           ]
         },
@@ -300,8 +300,8 @@ export function buildPendingItemCard({
         {
           element_type: "button_group",
           button_group: [
-            callbackButton("✅ Validar", `val:${entry.id}`),
-            callbackButton("❌ Divergente", `div:${entry.id}`),
+            callbackButton("✅ Permitir", `val:${entry.id}`),
+            callbackButton("❌ Recusar", `div:${entry.id}`),
             webRedirectButton("🌐 Painel", `${appUrl}/admin.html`)
           ]
         }
