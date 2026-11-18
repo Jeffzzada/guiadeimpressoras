@@ -11,7 +11,6 @@
  * - SHEET_TAB_LOG (opcional): nome da aba de histórico (padrão: detecta "Movimentações", "Registros", "log", etc.).
  * - SHEET_TAB_ARMARIO_TI (opcional): nome da aba do Armário de TI (padrão: "ArmarioTI").
  * - SHEET_TAB_VAZIOS_TI (opcional): nome da aba de vazios na sala de TI (padrão: "VaziosSalaTI").
- * - RESEND_API_KEY / RESEND_FROM_EMAIL (opcionais): disparo de e-mail via Resend.
  * - ALERT_WEBHOOK_URL (opcional): webhook (SeaTalk, Slack, Google Chat ou Discord).
  * - SEATALK_APP_ID / SEATALK_APP_SECRET / SEATALK_SIGNING_SECRET / SEATALK_GROUP_ID (opcionais):
  *   bot interativo no SeaTalk com cards, botões de validação e controle rápido.
@@ -128,10 +127,6 @@ export function getRuntimeConfig(env) {
       vaziosTI: String(env?.SHEET_TAB_VAZIOS_TI || "VaziosSalaTI").trim()
     },
     notifications: {
-      resendApiKey: String(env?.RESEND_API_KEY || "").trim(),
-      resendFromEmail: String(
-        env?.RESEND_FROM_EMAIL || "Shopee TI Impressora <onboarding@resend.dev>"
-      ).trim(),
       alertWebhookUrl: String(env?.ALERT_WEBHOOK_URL || "").trim(),
       appUrl: String(env?.APP_URL || "https://guiadeimpressoras.pages.dev").trim().replace(/\/+$/, "")
     },

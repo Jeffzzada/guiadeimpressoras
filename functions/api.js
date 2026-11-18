@@ -185,7 +185,9 @@ export async function handleApiRequest(request, env, ctx = null, deps = {}) {
           ...diag,
           admin: adminUser.email,
           notifications: {
-            email: Boolean(config.notifications.resendApiKey),
+            seatalkBot: Boolean(
+              config.seatalk?.appId && config.seatalk?.appSecret && config.seatalk?.groupId
+            ),
             webhook: Boolean(config.notifications.alertWebhookUrl)
           }
         });

@@ -21,8 +21,6 @@ GOOGLE_SERVICE_ACCOUNT_JSON='{"type":"service_account","client_email":"sheets-bo
 # SHEET_TAB_VAZIOS_TI="VaziosSalaTI"
 
 # Notificações opcionais quando houver nova movimentação:
-# RESEND_API_KEY=""
-# RESEND_FROM_EMAIL="Shopee TI Impressora <onboarding@resend.dev>"
 # ALERT_WEBHOOK_URL=""
 # APP_URL="https://guiadeimpressoras.pages.dev"
 

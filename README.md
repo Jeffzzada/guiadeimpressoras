@@ -41,7 +41,7 @@ Por rodar na mesma origem (`https://guiadeimpressoras.pages.dev/api`) via **Clou
 - **Prevenção de inconsistências:**
   - `Divergente` estorna automaticamente a quantidade aplicada no estoque e `Remover` limpa o registro sem estornar em duplicidade.
   - Sanitização HTML no cliente (`escapeHtml`) e gravação em modo `RAW` + proteção contra *formula injection* na planilha.
-  - Notificações opcionais por **e-mail (Resend)** e/ou **Webhook (SeaTalk, Slack, Google Chat, Discord)** executadas em segundo plano (`waitUntil`).
+  - Notificações opcionais via **Bot interativo SeaTalk** e/ou **Webhook (SeaTalk, Slack, Google Chat, Discord)** executadas em segundo plano (`waitUntil`).
 
 ---
 
@@ -57,7 +57,7 @@ Por rodar na mesma origem (`https://guiadeimpressoras.pages.dev/api`) via **Clou
 │       ├── google-auth.js              # Token OAuth da Service Account + validação JWT (JWKS)
 │       ├── sheets-client.js            # Cliente fino da Google Sheets API v4 (batchGet/batchUpdate)
 │       ├── inventory-service.js        # Regras de estoque, logs, validações e estornos
-│       └── notifications.js            # Alertas opcionais (Resend e/ou SeaTalk/Webhook)
+│       └── notifications.js            # Alertas opcionais (SeaTalk Bot e/ou Webhook)
 ├── tests/
 │   └── api.test.mjs                    # Testes automatizados (node --test)
 ├── assets/                             # Ícone e manual PDF da impressora HP 4303FDW
@@ -104,8 +104,6 @@ No painel do projeto no Cloudflare Pages (**Settings → Environment variables**
 | `SHEET_TAB_LOG` | Não | Nome da aba de movimentações (padrão: detecta `Movimentações`, `Registros`, `log`, etc.). |
 | `SHEET_TAB_ARMARIO_TI` | Não | Nome da aba do Armário de TI (padrão: `ArmarioTI`). |
 | `SHEET_TAB_VAZIOS_TI` | Não | Nome da aba de vazios na sala de TI (padrão: `VaziosSalaTI`). |
-| `RESEND_API_KEY` | Não | Chave da API do Resend para enviar e-mail de alerta aos admins. |
-| `RESEND_FROM_EMAIL` | Não | Remetente do Resend (padrão: `Shopee TI Impressora <onboarding@resend.dev>`). |
 | `ALERT_WEBHOOK_URL` | Não | URL de webhook de grupo (detecta automaticamente **SeaTalk**, Discord, Slack ou Google Chat). |
 | `SEATALK_APP_ID` | Não | App ID do bot criado no portal `open.seatalk.io` (habilita cards interativos com botões). |
 | `SEATALK_APP_SECRET` | Não | App Secret do bot no `open.seatalk.io` (*Secret*). |

@@ -105,8 +105,8 @@ function createFakeGoogleEnv({ initialSheets = {}, saPublicKey, jwkPublic }) {
       });
     }
 
-    // 3. Notifications (Resend + SeaTalk)
-    if (urlStr === "https://api.resend.com/emails" || urlStr.includes("seatalk.io")) {
+    // 3. Notifications (SeaTalk / Webhook)
+    if (urlStr.includes("seatalk.io")) {
       capturedNotifications.push({
         url: urlStr,
         body: JSON.parse(String(init.body || "{}"))
@@ -304,7 +304,6 @@ async function setupTestHarness(initialSheets = {}) {
     }),
     GOOGLE_CLIENT_ID: clientId,
     ADMIN_EMAILS: "jefferson.msantos@shopee.com,tacio.correia@shopee.com",
-    RESEND_API_KEY: "re_test_123",
     ALERT_WEBHOOK_URL: "https://openapi.seatalk.io/webhook/group/test123",
     APP_URL: "https://guiadeimpressoras.pages.dev"
   };
@@ -439,9 +438,8 @@ test("Full movement lifecycle: registrar, registrarLote, notifications, formula 
   const registrosRows = fake.sheets.get("Movimentações").rows;
   assert.equal(registrosRows[1][7], "'=HYPERLINK(\"http://evil.example\")");
 
-  // Verifica notificações Resend e SeaTalk
-  assert.equal(fake.capturedNotifications.length, 2);
-  assert.ok(fake.capturedNotifications.some(n => n.url.includes("resend.com")));
+  // Verifica notificação SeaTalk
+  assert.equal(fake.capturedNotifications.length, 1);
   assert.ok(fake.capturedNotifications.some(n => n.url.includes("seatalk.io")));
 
   // Verifica que getLog retorna observação limpa sem o apóstrofo protetor
