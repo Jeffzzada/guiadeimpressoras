@@ -1,7 +1,11 @@
 import { ApiError, getRuntimeConfig } from "./_lib/config.js";
 import { getGoogleAccessToken, verifyAdminToken } from "./_lib/google-auth.js";
 import { createInventoryService } from "./_lib/inventory-service.js";
-import { hasNotificationChannels, notifyNewMovements } from "./_lib/notifications.js";
+import {
+  hasNotificationChannels,
+  notifyNewMovements,
+  sendWeeklySummaryCard
+} from "./_lib/notifications.js";
 import { createSheetsClient } from "./_lib/sheets-client.js";
 
 function resolveCorsOrigin(request) {
@@ -45,6 +49,22 @@ function jsonResponse(request, status, data) {
     status,
     headers: buildResponseHeaders(request)
   });
+}
+
+async function constantTimeSecretMatch(provided, expected) {
+  const a = String(provided || "");
+  const b = String(expected || "");
+  if (!a || !b) return false;
+  const enc = new TextEncoder();
+  const [hashA, hashB] = await Promise.all([
+    crypto.subtle.digest("SHA-256", enc.encode(a)),
+    crypto.subtle.digest("SHA-256", enc.encode(b))
+  ]);
+  const bytesA = new Uint8Array(hashA);
+  const bytesB = new Uint8Array(hashB);
+  let diff = 0;
+  for (let i = 0; i < bytesA.length; i++) diff |= bytesA[i] ^ bytesB[i];
+  return diff === 0;
 }
 
 function extractAuthToken(request, payload) {
@@ -149,6 +169,33 @@ export async function handleApiRequest(request, env, ctx = null, deps = {}) {
       }
 
       const token = extractAuthToken(request, payload);
+
+      if (action === "resumoSemanal") {
+        if (!config.cronSecret) {
+          throw new ApiError(503, "CRON_SECRET não configurado no Cloudflare Pages.");
+        }
+        if (!(await constantTimeSecretMatch(token, config.cronSecret))) {
+          throw new ApiError(401, "Token de agendamento inválido.");
+        }
+        const [estoque, armarioTI, logs] = await Promise.all([
+          service.getEstoque(),
+          service.getArmarioTI(),
+          service.getLog()
+        ]);
+        const pendentesCount = logs.filter(l => l.validacao === "pendente").length;
+        try {
+          await sendWeeklySummaryCard(
+            config,
+            { estoque, armarioTI, pendentesCount },
+            { fetchImpl }
+          );
+        } catch (err) {
+          if (err instanceof ApiError) throw err;
+          throw new ApiError(503, err?.message || "Não foi possível enviar o resumo no SeaTalk.");
+        }
+        return jsonResponse(request, 200, { ok: true, sent: true, pendentesCount, estoque });
+      }
+
       const adminUser = await verifyAdminToken(token, config, {
         fetchImpl,
         nowMs,

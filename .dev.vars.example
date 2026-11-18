@@ -29,3 +29,4 @@ GOOGLE_SERVICE_ACCOUNT_JSON='{"type":"service_account","client_email":"sheets-bo
 # SEATALK_APP_SECRET=""
 # SEATALK_SIGNING_SECRET=""
 # SEATALK_GROUP_ID=""
+# CRON_SECRET=""

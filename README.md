@@ -109,16 +109,24 @@ No painel do projeto no Cloudflare Pages (**Settings → Environment variables**
 | `SEATALK_APP_SECRET` | Não | App Secret do bot no `open.seatalk.io` (*Secret*). |
 | `SEATALK_SIGNING_SECRET` | Não | Signing Secret do Event Callback (`https://guiadeimpressoras.pages.dev/api/seatalk`, *Secret*). |
 | `SEATALK_GROUP_ID` | Não | ID do grupo do SeaTalk onde o bot envia os cards e responde comandos. |
+| `CRON_SECRET` | Não | Segredo compartilhado com o GitHub Actions para disparar o resumo semanal no SeaTalk. |
 | `APP_URL` | Não | URL pública do portal usada nos links de notificação (padrão: `https://guiadeimpressoras.pages.dev`). |
 
 \* Use **apenas** `GOOGLE_SERVICE_ACCOUNT_JSON` **ou** o par `GOOGLE_SERVICE_ACCOUNT_EMAIL` + `GOOGLE_PRIVATE_KEY`.
 
-### 3. Como adicionar ou remover um administrador de TI
+### 3. Verificação semanal automática (Segundas, 9h BRT)
+
+O workflow [`.github/workflows/resumo-semanal.yml`](.github/workflows/resumo-semanal.yml) executa toda **segunda-feira às 09:00 (12:00 UTC)** — e também pode ser disparado manualmente na aba **Actions** — enviando o card de saldo para o Bot no SeaTalk:
+
+1. Gere um texto aleatório forte e cadastre como variável **`CRON_SECRET`** (*Secret*) no Cloudflare Pages (**Production**).
+2. No GitHub (**Settings → Secrets and variables → Actions**), crie o *Repository secret* **`CRON_SECRET`** com o mesmo valor.
+
+### 4. Como adicionar ou remover um administrador de TI
 
 1. Atualize `CONFIG.ADMIN_WHITELIST` em [`app.js`](app.js) (validação na tela de login).
 2. Caso utilize a variável `ADMIN_EMAILS` no Cloudflare Pages, atualize-a também (ou deixe-a alinhada com [`functions/_lib/config.js`](functions/_lib/config.js)).
 
-### 4. Verificação rápida após publicar
+### 5. Verificação rápida após publicar
 
 - Acesse `https://guiadeimpressoras.pages.dev/api?action=health` — deve responder `{"ok":true,...}`.
 - Acesse `https://guiadeimpressoras.pages.dev/api?action=getEstoque` — deve listar os 4 toners da planilha em milissegundos, sem erro de CORS.

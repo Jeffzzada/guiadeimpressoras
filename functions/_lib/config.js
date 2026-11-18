@@ -14,6 +14,7 @@
  * - ALERT_WEBHOOK_URL (opcional): webhook (SeaTalk, Slack, Google Chat ou Discord).
  * - SEATALK_APP_ID / SEATALK_APP_SECRET / SEATALK_SIGNING_SECRET / SEATALK_GROUP_ID (opcionais):
  *   bot interativo no SeaTalk com cards, botões de validação e controle rápido.
+ * - CRON_SECRET (opcional): segredo para disparo agendado do resumo semanal via GitHub Actions.
  * - APP_URL (opcional): URL pública do portal para links nas notificações.
  */
 
@@ -132,6 +133,7 @@ export function getRuntimeConfig(env) {
       alertWebhookUrl: String(env?.ALERT_WEBHOOK_URL || "").trim(),
       appUrl: String(env?.APP_URL || "https://guiadeimpressoras.pages.dev").trim().replace(/\/+$/, "")
     },
+    cronSecret: String(env?.CRON_SECRET || "").trim(),
     seatalk: getSeaTalkConfig(env)
   };
 }

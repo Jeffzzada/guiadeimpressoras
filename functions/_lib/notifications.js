@@ -1,5 +1,5 @@
 import { TONER_MAP } from "./config.js";
-import { buildMovementAlertCard } from "./seatalk-cards.js";
+import { buildMovementAlertCard, buildWeeklyStockCard } from "./seatalk-cards.js";
 import { isSeaTalkBotConfigured, sendGroupMessage } from "./seatalk-client.js";
 
 const TIPO_LABEL = {
@@ -89,4 +89,29 @@ export async function notifyNewMovements(config, details, { fetchImpl = fetch } 
   ]);
 
   return results.some(r => r.status === "fulfilled" && r.value === true);
+}
+
+export async function sendWeeklySummaryCard(
+  config,
+  { estoque = [], armarioTI = [], pendentesCount = 0 },
+  { fetchImpl = fetch } = {}
+) {
+  const seaTalk = config.seatalk;
+  if (!isSeaTalkBotConfigured(seaTalk) || !seaTalk?.groupId) {
+    throw new Error("Bot SeaTalk ou SEATALK_GROUP_ID não configurado no Cloudflare Pages.");
+  }
+
+  const card = buildWeeklyStockCard({
+    estoque,
+    armarioTI,
+    pendentesCount,
+    appUrl: config.notifications.appUrl
+  });
+
+  await sendGroupMessage(
+    { groupId: seaTalk.groupId, message: card },
+    seaTalk,
+    { fetchImpl }
+  );
+  return true;
 }

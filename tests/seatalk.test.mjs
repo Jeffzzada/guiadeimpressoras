@@ -556,3 +556,56 @@ test("SeaTalk Bot handles bot_added_to_group_chat and group mention", async () =
     /Controle Rápido de Toners/
   );
 });
+
+test("resumoSemanal exige CRON_SECRET válido e envia card semanal do Armário da Impressora", async () => {
+  const { env, sentGroupMessages, fetchImpl, nowMs } = await setupSeaTalkHarness();
+
+  // Sem CRON_SECRET configurado no servidor -> 503
+  const resNoCfg = await handleApiRequest(
+    new Request("https://guiadeimpressoras.pages.dev/api", {
+      method: "POST",
+      headers: { Authorization: "Bearer cron-ok-123" },
+      body: JSON.stringify({ action: "resumoSemanal" })
+    }),
+    env,
+    null,
+    { fetchImpl, nowMs }
+  );
+  assert.equal(resNoCfg.status, 503);
+
+  const envCron = { ...env, CRON_SECRET: "cron-ok-123" };
+
+  // Token errado -> 401
+  const resWrong = await handleApiRequest(
+    new Request("https://guiadeimpressoras.pages.dev/api", {
+      method: "POST",
+      headers: { Authorization: "Bearer wrong" },
+      body: JSON.stringify({ action: "resumoSemanal" })
+    }),
+    envCron,
+    null,
+    { fetchImpl, nowMs }
+  );
+  assert.equal(resWrong.status, 401);
+
+  // Token válido -> 200 e envia card semanal com saldo + alertas + botões
+  const resOk = await handleApiRequest(
+    new Request("https://guiadeimpressoras.pages.dev/api", {
+      method: "POST",
+      headers: { Authorization: "Bearer cron-ok-123" },
+      body: JSON.stringify({ action: "resumoSemanal" })
+    }),
+    envCron,
+    null,
+    { fetchImpl, nowMs }
+  );
+  assert.equal(resOk.status, 200);
+  const body = await resOk.json();
+  assert.equal(body.ok, true);
+  assert.equal(body.sent, true);
+  assert.equal(sentGroupMessages.length, 1);
+  const card = sentGroupMessages[0].message.interactive_message;
+  assert.match(card.elements[0].title.text, /Verificação Semanal/);
+  assert.match(card.elements[1].description.text, /Armário Impressora:/);
+  assert.match(card.elements[1].description.text, /Estoque baixo/);
+});

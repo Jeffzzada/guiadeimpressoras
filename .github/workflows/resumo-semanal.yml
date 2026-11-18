@@ -1,0 +1,37 @@
+name: Verificação semanal de toners (SeaTalk)
+
+on:
+  schedule:
+    # Toda segunda-feira às 09:00 BRT (12:00 UTC)
+    - cron: "0 12 * * 1"
+  workflow_dispatch:
+
+jobs:
+  enviar-resumo:
+    name: Enviar resumo do Armário da Impressora no SeaTalk
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+
+    steps:
+      - name: Validar segredo CRON_SECRET
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::error::Cadastre o Secret CRON_SECRET em Settings -> Secrets and variables -> Actions."
+            exit 1
+          fi
+
+      - name: Disparar resumo semanal no SeaTalk Bot
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          API_URL: ${{ vars.API_URL || 'https://guiadeimpressoras.pages.dev/api' }}
+        run: |
+          response=$(curl -sS -w "\n%{http_code}" -X POST "$API_URL" \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            -H "Content-Type: application/json" \
+            -d '{"action":"resumoSemanal"}')
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+          echo "HTTP $http_code: $body"
+          test "$http_code" -ge 200 && test "$http_code" -lt 300

@@ -151,17 +151,21 @@ export function buildTonerMenuCard({
   estoque = [],
   armarioTI = [],
   pendentesCount = 0,
-  appUrl = "https://guiadeimpressoras.pages.dev"
+  appUrl = "https://guiadeimpressoras.pages.dev",
+  title = "📦 Controle Rápido de Toners · Shopee TI",
+  extraLines = [],
+  actionPrompt = "Clique abaixo para **adicionar +1 toner cheio** no Armário da Impressora:"
 }) {
   const descParts = [
     `**Armário Impressora:** ${formatEstoqueResumo(estoque)}`,
     `**Armário TI (reserva):** ${formatArmarioTIResumo(armarioTI)}`,
-    `**Pendentes de validação:** ${pendentesCount}`
+    `**Pendentes de validação:** ${pendentesCount}`,
+    ...extraLines
   ];
 
   const alertTI = formatSolicitarTILine(estoque);
   if (alertTI) descParts.push(alertTI);
-  descParts.push("", "Clique abaixo para **adicionar +1 toner cheio** no Armário da Impressora:");
+  descParts.push("", actionPrompt);
 
   return {
     tag: "interactive_message",
@@ -169,7 +173,7 @@ export function buildTonerMenuCard({
       elements: [
         {
           element_type: "title",
-          title: { text: "📦 Controle Rápido de Toners · Shopee TI" }
+          title: { text: truncate(title, 120) }
         },
         {
           element_type: "description",
@@ -205,6 +209,37 @@ export function buildTonerMenuCard({
       ]
     }
   };
+}
+
+export function buildWeeklyStockCard({
+  estoque = [],
+  armarioTI = [],
+  pendentesCount = 0,
+  appUrl = "https://guiadeimpressoras.pages.dev"
+}) {
+  const zerados = estoque
+    .filter(r => (Number(r?.cheios) || 0) === 0)
+    .map(r => (TONER_MAP[r.ref]?.nome || r.ref).toLowerCase());
+  const baixos = estoque
+    .filter(r => (Number(r?.cheios) || 0) === 1)
+    .map(r => (TONER_MAP[r.ref]?.nome || r.ref).toLowerCase());
+
+  const extraLines = [];
+  if (zerados.length) extraLines.push(`🚨 **Sem estoque na impressora:** ${zerados.join(", ")}`);
+  if (baixos.length) extraLines.push(`⚡ **Estoque baixo (1 un.):** ${baixos.join(", ")}`);
+  if (!zerados.length && !baixos.length && !estoque.some(r => r?.solicitarTI)) {
+    extraLines.push("✅ **Armário da impressora abastecido.**");
+  }
+
+  return buildTonerMenuCard({
+    estoque,
+    armarioTI,
+    pendentesCount,
+    appUrl,
+    title: "🗓️ Verificação Semanal · Estoque HP Color",
+    extraLines,
+    actionPrompt: "Confira o armário físico da impressora e use os botões abaixo se precisar repor ou validar:"
+  });
 }
 
 export function buildArmarioTIMenuCard({
