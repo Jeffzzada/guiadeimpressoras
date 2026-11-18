@@ -1,6 +1,6 @@
 /* ── CONFIG ── */
 const CONFIG = {
-  APPS_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbx0ByoA1BBRIRTpC3ir-qtc8qnPq8nM3SYEjbrncTqCKIeG_sUTRBU0sJLFXeHUPm_5IA/exec",
+  API_URL: "/api",
   GOOGLE_CLIENT_ID: "1028346342471-oq4rafb2rr864rl3dck10pc3te3ilvsb.apps.googleusercontent.com",
   ADMIN_TIMEOUT_MINUTES: 5,
   ADMIN_WHITELIST: [
@@ -48,28 +48,32 @@ function normalizeRouteName(pathOrHref) {
 }
 
 /* ── API CLIENT ── */
-async function apiGet(action) {
-  const res = await fetch(`${CONFIG.APPS_SCRIPT_URL}?action=${encodeURIComponent(action)}`);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const data = await res.json();
-  if (data && !Array.isArray(data) && (data.erro || data.error || data.ok === false)) {
-    throw new Error(data.erro || data.error || "Erro ao consultar o servidor.");
+async function parseApiResponse(res, fallbackMsg) {
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new Error(data?.erro || data?.error || `HTTP ${res.status}`);
+  }
+  if (data === null) {
+    throw new Error("Resposta inválida do servidor.");
+  }
+  if (!Array.isArray(data) && (data.erro || data.error || data.ok === false)) {
+    throw new Error(data.erro || data.error || fallbackMsg);
   }
   return data;
 }
 
+async function apiGet(action) {
+  const res = await fetch(`${CONFIG.API_URL}?action=${encodeURIComponent(action)}`);
+  return parseApiResponse(res, "Erro ao consultar o servidor.");
+}
+
 async function apiPost(payload) {
-  const res = await fetch(CONFIG.APPS_SCRIPT_URL, {
+  const res = await fetch(CONFIG.API_URL, {
     method: "POST",
-    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    headers: { "Content-Type": "application/json;charset=utf-8" },
     body: JSON.stringify(payload)
   });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const data = await res.json().catch(() => ({}));
-  if (data && (data.erro || data.error || data.ok === false)) {
-    throw new Error(data.erro || data.error || "Erro ao processar solicitação.");
-  }
-  return data;
+  return parseApiResponse(res, "Erro ao processar solicitação.");
 }
 
 /* ── NAV ATIVA ── */

@@ -1,0 +1,27 @@
+# Copie este arquivo para ".dev.vars" para testar localmente com `npm run dev`
+# NUNCA faça commit do arquivo ".dev.vars" (ele já está no .gitignore).
+
+# ID da planilha do Google Sheets (trecho entre /d/ e /edit na URL)
+GOOGLE_SHEET_ID="COLE_AQUI_O_ID_DA_PLANILHA"
+
+# Recomendado: cole o conteúdo inteiro do arquivo JSON da Service Account em uma única linha
+# (alternativa: deixe em branco e preencha GOOGLE_SERVICE_ACCOUNT_EMAIL + GOOGLE_PRIVATE_KEY abaixo)
+GOOGLE_SERVICE_ACCOUNT_JSON='{"type":"service_account","client_email":"sheets-bot@seu-projeto.iam.gserviceaccount.com","private_key":"-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"}'
+
+# Alternativa ao JSON completo:
+# GOOGLE_SERVICE_ACCOUNT_EMAIL="sheets-bot@seu-projeto.iam.gserviceaccount.com"
+# GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+
+# Opcionais (já possuem valores padrão):
+# GOOGLE_CLIENT_ID="1028346342471-oq4rafb2rr864rl3dck10pc3te3ilvsb.apps.googleusercontent.com"
+# ADMIN_EMAILS="jefferson.msantos@shopee.com,tacio.correia@shopee.com"
+# SHEET_TAB_ESTOQUE="webinventario"
+# SHEET_TAB_LOG="" # Em branco = detecta automaticamente (Movimentações, Registros, log, etc.)
+# SHEET_TAB_ARMARIO_TI="ArmarioTI"
+# SHEET_TAB_VAZIOS_TI="VaziosSalaTI"
+
+# Notificações opcionais quando houver nova movimentação:
+# RESEND_API_KEY=""
+# RESEND_FROM_EMAIL="Shopee TI Impressora <onboarding@resend.dev>"
+# ALERT_WEBHOOK_URL=""
+# APP_URL="https://guiadeimpressoras.pages.dev"

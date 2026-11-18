@@ -1,1 +1,7 @@
 /apps-script
+.dev.vars
+.wrangler
+node_modules
+.env
+.env.*
+!.dev.vars.example

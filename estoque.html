@@ -812,7 +812,12 @@ async function salvarAlteracoesCheios() {
       await loadTonerPill();
     }
 
-    setEditorFeedback("ok", "Movimentação salva na planilha! O administrador recebeu um e-mail para validação.");
+    setEditorFeedback(
+      "ok",
+      res?.notified
+        ? "Movimentação salva na planilha! A equipe de TI foi notificada para validação."
+        : "Movimentação salva na planilha para validação do administrador."
+    );
   } catch (err) {
     isEditorSaving = false;
     saveEditorDraft(false);
@@ -1058,7 +1063,7 @@ async function submeterMovimentacao() {
     }
     fecharModal();
   } catch (err) {
-    setModalError(err?.message || "Erro ao registrar. Verifique a conexão com o Apps Script.");
+    setModalError(err?.message || "Erro ao registrar. Verifique a conexão com o servidor.");
   }
 
   btn.textContent = "Registrar";
