@@ -705,3 +705,83 @@ test("Suporta múltiplos grupos em SEATALK_GROUP_ID separados por vírgula", asy
   assert.equal(sentGroupMessages[4].group_id, "grp_ti_2");
   assert.equal(sheets.get("Movimentações").rows[1][8], "validado");
 });
+
+test("Usuário não administrador recebe card para adicionar/remover toners e envia para validação do admin", async () => {
+  const { env, sheets, sentGroupMessages, sendSeaTalkEvent } = await setupSeaTalkHarness();
+
+  // 1. Não-admin menciona o Bot -> recebe card público sem Armário de TI
+  await sendSeaTalkEvent({
+    event_id: "evt_user_mention",
+    event_type: "new_mentioned_message_received_from_group_chat",
+    app_id: env.SEATALK_APP_ID,
+    event: {
+      group_id: "grp_ti_1",
+      message: {
+        message_id: "msg_user_1",
+        sender: { employee_code: "e_op_1" },
+        text: { content: "@Bot" }
+      }
+    }
+  });
+  assert.equal(sentGroupMessages.length, 1);
+  const userAddCard = sentGroupMessages[0].message.interactive_message;
+  assert.match(userAddCard.elements[0].title.text, /Armário da Impressora/);
+  assert.equal(userAddCard.elements[1].description.text.includes("Armário TI (reserva)"), false);
+  assert.equal(userAddCard.elements[2].button_group[0].value, "usr_add:W2150XC");
+  assert.equal(userAddCard.elements[3].button_group[1].value, "menu:user_sub");
+
+  // 2. Não-admin alterna para modo Retirar (-1) e retira 1 Preto (3 -> 2)
+  await sendSeaTalkEvent({
+    event_id: "evt_user_sub_mode",
+    event_type: "interactive_message_click",
+    app_id: env.SEATALK_APP_ID,
+    event: {
+      message_id: "msg_user_card",
+      group_id: "grp_ti_1",
+      employee_code: "e_op_1",
+      value: "menu:user_sub"
+    }
+  });
+  const userSubCard = sentGroupMessages[1].message.interactive_message;
+  assert.equal(userSubCard.elements[2].button_group[0].value, "usr_sub:W2150XC");
+
+  await sendSeaTalkEvent({
+    event_id: "evt_user_sub_click",
+    event_type: "interactive_message_click",
+    app_id: env.SEATALK_APP_ID,
+    event: {
+      message_id: "msg_user_sub_card",
+      group_id: "grp_ti_1",
+      employee_code: "e_op_1",
+      value: "usr_sub:W2150XC"
+    }
+  });
+  // Planilha: Preto caiu 3 -> 2 como "pendente"
+  assert.equal(sheets.get("webinventario").rows[1][1], 2);
+  const logRow = sheets.get("Movimentações").rows[1];
+  assert.equal(logRow[2], "W2150XC");
+  assert.equal(logRow[3], "saida_cheio");
+  assert.equal(logRow[6], "Operador");
+  assert.equal(logRow[8], "pendente");
+
+  // Mensagem 2 = ack no thread do usuário; Mensagem 3 = card de alerta para admin com Permitir/Recusar
+  assert.match(sentGroupMessages[2].message.text.content, /enviada para validação do TI/);
+  const alertButtons = sentGroupMessages[3].message.interactive_message.elements[2].button_group;
+  assert.equal(alertButtons[0].text, "✅ Permitir");
+  assert.equal(alertButtons[1].text, "❌ Recusar");
+
+  // 3. Não-admin continua bloqueado se tentar clicar em Permitir ou menu de TI
+  await sendSeaTalkEvent({
+    event_id: "evt_user_try_allow",
+    event_type: "interactive_message_click",
+    app_id: env.SEATALK_APP_ID,
+    event: {
+      message_id: "msg_alert",
+      group_id: "grp_ti_1",
+      employee_code: "e_op_1",
+      value: alertButtons[0].value
+    }
+  });
+  assert.match(sentGroupMessages[4].message.text.content, /Acesso restrito/);
+  assert.equal(sheets.get("Movimentações").rows[1][8], "pendente");
+});

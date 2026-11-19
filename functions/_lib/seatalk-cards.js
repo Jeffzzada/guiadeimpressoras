@@ -211,6 +211,70 @@ export function buildTonerMenuCard({
   };
 }
 
+export function buildUserTonerCard({
+  estoque = [],
+  mode = "add",
+  appUrl = "https://guiadeimpressoras.pages.dev"
+}) {
+  const isAdd = mode !== "sub";
+  const prefix = isAdd ? "usr_add" : "usr_sub";
+  const sign = isAdd ? "➕1" : "➖1";
+
+  const descParts = [
+    `**Armário Impressora:** ${formatEstoqueResumo(estoque)}`
+  ];
+  const alertTI = formatSolicitarTILine(estoque);
+  if (alertTI) descParts.push(alertTI);
+  descParts.push(
+    "",
+    isAdd
+      ? "Clique abaixo para **adicionar +1 toner cheio** (envia para validação do TI):"
+      : "Clique abaixo para **retirar −1 toner cheio** (envia para validação do TI):"
+  );
+
+  return {
+    tag: "interactive_message",
+    interactive_message: {
+      elements: [
+        {
+          element_type: "title",
+          title: { text: "📦 Armário da Impressora · Controle de Toners" }
+        },
+        {
+          element_type: "description",
+          description: {
+            format: 1,
+            text: truncate(descParts.join("\n"), 1000)
+          }
+        },
+        {
+          element_type: "button_group",
+          button_group: [
+            callbackButton(`${sign} Preto`, `${prefix}:W2150XC`),
+            callbackButton(`${sign} Ciano`, `${prefix}:W2151XC`),
+            callbackButton(`${sign} Amarelo`, `${prefix}:W2152XC`)
+          ]
+        },
+        {
+          element_type: "button_group",
+          button_group: [
+            callbackButton(`${sign} Magenta`, `${prefix}:W2153XC`),
+            callbackButton(
+              isAdd ? "➖ Retirar (−1)" : "➕ Adicionar (+1)",
+              isAdd ? "menu:user_sub" : "menu:user_add"
+            ),
+            callbackButton("🔄 Atualizar", isAdd ? "menu:user_add" : "menu:user_sub")
+          ]
+        },
+        {
+          element_type: "button",
+          button: webRedirectButton("📦 Estoque Web", `${appUrl}/estoque.html`)
+        }
+      ]
+    }
+  };
+}
+
 export function buildWeeklyStockCard({
   estoque = [],
   armarioTI = [],

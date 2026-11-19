@@ -1,12 +1,15 @@
 import { ApiError, TONER_MAP, getRuntimeConfig, getSeaTalkConfig } from "../_lib/config.js";
 import { getGoogleAccessToken } from "../_lib/google-auth.js";
 import { createInventoryService } from "../_lib/inventory-service.js";
+import { notifyNewMovements } from "../_lib/notifications.js";
 import { verifySeaTalkSignature } from "../_lib/seatalk-auth.js";
 import {
   buildActionResultCard,
   buildArmarioTIMenuCard,
+  buildMovementAlertCard,
   buildPendingItemCard,
   buildTonerMenuCard,
+  buildUserTonerCard,
   formatEstoqueResumo
 } from "../_lib/seatalk-cards.js";
 import {
@@ -158,11 +161,19 @@ async function handleInteractiveClick(payload, env, deps) {
   }
 
   const actor = await resolveActor(event, config, deps);
-  if (!actor.email || !config.adminEmails.includes(actor.email)) {
+  const isAdmin = Boolean(actor.email && config.adminEmails.includes(actor.email));
+  const isUserPublicAction =
+    value === "menu:user_add" ||
+    value === "menu:user_sub" ||
+    value.startsWith("usr_add:") ||
+    value.startsWith("usr_sub:") ||
+    (value === "menu:toners" && !isAdmin);
+
+  if (!isAdmin && !isUserPublicAction) {
     await replyGroupText(
       groupId,
       threadId,
-      `⛔ Acesso restrito: apenas administradores de TI autorizados (${actor.email || "usuário não identificado"}) podem validar ou alterar o estoque pelo SeaTalk.`,
+      `⛔ Acesso restrito: apenas administradores de TI autorizados (${actor.email || "usuário não identificado"}) podem validar ou alterar o Armário de TI pelo SeaTalk.`,
       seaTalk,
       deps
     );
@@ -174,23 +185,92 @@ async function handleInteractiveClick(payload, env, deps) {
   const appUrl = config.notifications.appUrl;
 
   try {
+    if (value === "menu:user_add" || value === "menu:user_sub" || (value === "menu:toners" && !isAdmin)) {
+      const estoque = await service.getEstoque();
+      await replyGroupCard(
+        groupId,
+        threadId,
+        buildUserTonerCard({
+          estoque,
+          mode: value === "menu:user_sub" ? "sub" : "add",
+          appUrl
+        }),
+        seaTalk,
+        deps
+      );
+      return;
+    }
+
+    if (value.startsWith("usr_add:") || value.startsWith("usr_sub:")) {
+      const isSub = value.startsWith("usr_sub:");
+      const ref = value.slice(8).trim().toUpperCase();
+      const toner = TONER_MAP[ref];
+      if (!toner) return;
+
+      if (isSub) {
+        const estoqueAtual = await service.getEstoque();
+        const row = estoqueAtual.find(r => r.ref === ref);
+        if (!row || (Number(row.cheios) || 0) <= 0) {
+          await replyGroupText(
+            groupId,
+            threadId,
+            `⚠️ Sem saldo de **${toner.nome}** (${ref}) no Armário da Impressora para retirar.`,
+            seaTalk,
+            deps
+          );
+          return;
+        }
+      }
+
+      const reg = await service.registrar({
+        modelo: ref,
+        tipo: isSub ? "saida_cheio" : "entrada_cheio",
+        qtd: 1,
+        resp: actor.name,
+        turno: getCurrentTurno(deps.nowMs),
+        obs: "Solicitado via SeaTalk Bot",
+        data: new Date(deps.nowMs).toISOString()
+      });
+
+      await replyGroupText(
+        groupId,
+        threadId,
+        `⏳ Movimentação registrada por **${actor.name}**: **${isSub ? "−1 (retirada)" : "+1 (entrada)"} ${toner.nome}** (${ref}) — enviada para validação do TI.\n**Armário Impressora:** ${formatEstoqueResumo(reg.estoque)}`,
+        seaTalk,
+        deps
+      );
+
+      if (getConfiguredGroupIds(seaTalk).length) {
+        await notifyNewMovements(config, reg.notificationData, { fetchImpl: deps.fetchImpl });
+      } else {
+        await replyGroupCard(
+          groupId,
+          threadId,
+          buildMovementAlertCard({ ...reg.notificationData, appUrl }),
+          seaTalk,
+          deps
+        );
+      }
+      return;
+    }
+
     if (value === "menu:toners") {
-    const [estoque, armarioTI, logs] = await Promise.all([
-      service.getEstoque(),
-      service.getArmarioTI(),
-      service.getLog()
-    ]);
-    const pendentesCount = logs.filter(l => l.validacao === "pendente").length;
-    await replyGroupCard(
-      groupId,
-      threadId,
-      buildTonerMenuCard({ estoque, armarioTI, pendentesCount, appUrl }),
-      seaTalk,
-      deps
-    );
-    await avisarGroupIdSeAusente(groupId, threadId, seaTalk, deps);
-    return;
-  }
+      const [estoque, armarioTI, logs] = await Promise.all([
+        service.getEstoque(),
+        service.getArmarioTI(),
+        service.getLog()
+      ]);
+      const pendentesCount = logs.filter(l => l.validacao === "pendente").length;
+      await replyGroupCard(
+        groupId,
+        threadId,
+        buildTonerMenuCard({ estoque, armarioTI, pendentesCount, appUrl }),
+        seaTalk,
+        deps
+      );
+      await avisarGroupIdSeAusente(groupId, threadId, seaTalk, deps);
+      return;
+    }
 
   if (value === "menu:ti" || value === "menu:ti_sub") {
     const [armarioTI, estoque] = await Promise.all([
@@ -458,10 +538,14 @@ async function handleMentionOrMessage(payload, env, deps) {
 
   if (!isAdmin) {
     const estoque = await service.getEstoque();
-    await replyGroupText(
+    await replyGroupCard(
       groupId,
       threadId,
-      `📦 **Estoque atual — Armário da Impressora:**\n${formatEstoqueResumo(estoque)}\n\nPara registrar uso, acesse: ${config.notifications.appUrl}/estoque.html`,
+      buildUserTonerCard({
+        estoque,
+        mode: "add",
+        appUrl: config.notifications.appUrl
+      }),
       seaTalk,
       deps
     );
